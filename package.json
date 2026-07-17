@@ -1,7 +1,7 @@
 {
   "name": "fact-protocol-report",
-  "version": "0.1.0",
-  "description": "事实协议报告 - 数据采集与分析系统",
+  "version": "0.2.0",
+  "description": "BSP 1.1 - Business Signal Protocol Reality Layer",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -10,18 +10,18 @@
     "lint": "eslint src/ --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cli": "tsx src/cli/index.ts"
   },
-  "keywords": ["fact-protocol", "data-collection", "analysis", "report"],
+  "keywords": ["bsp", "business-signal-protocol", "reality-layer", "evidence", "traceability"],
   "author": "HUANGJUNHAOTAYLOR-LAB",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.2",
-    "cheerio": "^1.0.0",
-    "dayjs": "^1.11.11",
+    "express": "^4.19.2",
     "pino": "^9.3.2"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/node": "^20.14.2",
     "@typescript-eslint/eslint-plugin": "^7.13.0",
     "@typescript-eslint/parser": "^7.13.0",

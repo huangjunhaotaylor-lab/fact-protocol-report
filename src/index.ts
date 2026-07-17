@@ -1,58 +1,17 @@
 /**
- * 事实协议报告 - 数据采集与分析系统
+ * BSP 1.1 Reality Layer — 应用入口
  *
- * 项目入口文件
+ * 启动 Express API 服务器
  */
 
+import { createApp } from './app';
 import { logger } from './utils/logger';
-import { DataCollector } from './collectors/collector';
-import { DataAnalyzer } from './analyzers/analyzer';
-import { ReportGenerator } from './reporters/generator';
 
-export interface AppConfig {
-  /** 数据源配置 */
-  sources: SourceConfig[];
-  /** 输出目录 */
-  outputDir: string;
-}
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
-export interface SourceConfig {
-  /** 数据源名称 */
-  name: string;
-  /** 数据源类型 */
-  type: 'api' | 'web' | 'file';
-  /** 数据源地址 */
-  url: string;
-}
+const app = createApp();
 
-/**
- * 应用主入口
- */
-async function main(): Promise<void> {
-  logger.info('Fact Protocol Report - Starting...');
-
-  const collector = new DataCollector();
-  const analyzer = new DataAnalyzer();
-  const reporter = new ReportGenerator();
-
-  try {
-    // 1. 数据采集
-    logger.info('Phase 1: Data Collection');
-    const rawData = await collector.collect();
-
-    // 2. 数据分析
-    logger.info('Phase 2: Data Analysis');
-    const analyzedData = await analyzer.analyze(rawData);
-
-    // 3. 报告生成
-    logger.info('Phase 3: Report Generation');
-    await reporter.generate(analyzedData);
-
-    logger.info('Fact Protocol Report - Completed successfully');
-  } catch (error) {
-    logger.error('Fatal error:', error);
-    process.exit(1);
-  }
-}
-
-main();
+app.listen(PORT, () => {
+  logger.info(`BSP 1.1 Reality Layer server running on http://localhost:${PORT}`);
+  logger.info(`Health check: http://localhost:${PORT}/health`);
+});
