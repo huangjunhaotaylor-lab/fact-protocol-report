@@ -21,17 +21,19 @@ export function createApp(): Application {
   });
 
   // API 路由
-  app.use('/api/evidence', evidenceRoutes);
+  app.use('/api/evidences', evidenceRoutes);
   app.use('/api/fragments', fragmentRoutes);
   app.use('/api/signals', signalRoutes);
   app.use('/api/objects', objectRoutes);
   app.use('/api/relations', relationRoutes);
 
   // 统一错误处理
-  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    logger.error('Unhandled error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: err.message } });
-  });
+  app.use(
+    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      logger.error({ err }, 'Unhandled error');
+      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: err.message } });
+    },
+  );
 
   return app;
 }

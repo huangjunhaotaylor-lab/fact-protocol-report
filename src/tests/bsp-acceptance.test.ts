@@ -61,7 +61,9 @@ describe('BSP 1.1 验收标准', () => {
       content: '原始内容',
     });
 
-    expect(() => evidenceService.updateContent(evidence.id, '修改后内容')).toThrow(ImmutabilityError);
+    expect(() => evidenceService.updateContent(evidence.id, '修改后内容')).toThrow(
+      ImmutabilityError,
+    );
   });
 
   // AC-003: 用户可以从 Evidence 创建 Fragment
@@ -576,9 +578,9 @@ describe('BSP 1.1 标准示例 (Section 14)', () => {
       name: '仓库盘点流程',
       namedId: true,
     });
-    objectService.activate(obj.id);
+    const activated = objectService.activate(obj.id);
     expect(obj.id).toBe('OBJ-仓库盘点流程');
-    expect(obj.state).toBe('Active');
+    expect(activated.state).toBe('Active');
 
     // 4. Signal
     const signal = signalService.create({
