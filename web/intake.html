@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — 录入台</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* ===== 录入台自有样式（不动 styles.css） ===== */
+
+    /* 步骤卡头 */
+    .step-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .step-num {
+      flex: 0 0 auto;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      border: 1.5px solid var(--muted);
+      color: var(--muted);
+    }
+    .step-num.s1 { border-color: var(--c-evidence); color: var(--c-evidence); }
+    .step-num.s2 { border-color: #8a7c62; color: #8a7c62; }
+    .step-num.s3 { border-color: var(--c-signal); color: var(--c-signal); }
+    .step-title { font-size: 15px; font-weight: 700; }
+    .step-hint { font-size: 12px; color: var(--muted); }
+
+    /* 表单 */
+    .f-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; margin-bottom: 10px; }
+    .f-grid .span2 { grid-column: span 2; }
+    .f-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+    .f-label .req { color: var(--c-signal); }
+    .f-input, .f-select, .f-textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card-bg);
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--ink);
+    }
+    .f-input:focus, .f-select:focus, .f-textarea:focus { outline: none; border-color: var(--c-signal); }
+    .f-input[readonly] { background: var(--bg); color: var(--muted); }
+    .f-textarea { resize: vertical; min-height: 90px; line-height: 1.7; }
+    .f-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .f-count { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    details.opt { margin-bottom: 10px; }
+    details.opt summary { font-size: 12px; color: var(--muted); cursor: pointer; }
+    details.opt[open] summary { margin-bottom: 8px; }
+
+    /* 当前工作链预览条 */
+    .chain-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+    .cs-node {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 12px;
+      background: var(--bg);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .cs-node .cs-k { color: var(--muted); }
+    .cs-node .cs-v { font-weight: 600; }
+    .cs-node.on-evidence { border-left: 3px solid var(--c-evidence); }
+    .cs-node.on-fragment { border-left: 3px solid var(--c-fragment); }
+    .cs-node.on-signal { border-left: 3px solid var(--c-signal); }
+    .cs-node.on-object { border-left: 3px solid var(--c-object); }
+    .cs-arrow { color: var(--muted); }
+
+    /* Evidence 原文划选取段 */
+    .sel-text { cursor: text; user-select: text; margin-bottom: 10px; }
+    .sel-text::selection, .sel-text *::selection { background: #f2e0cc; }
+
+    /* Fragment 芯片 */
+    .frag-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 12px; }
+    .frag-row:last-child { border-bottom: none; }
+    .frag-row .fr-main { flex: 1 1 auto; min-width: 0; }
+    .frag-row .fr-id { font-weight: 600; }
+    .frag-row .fr-content { color: var(--ink); margin-top: 2px; }
+    .frag-row .fr-meta { color: var(--muted); margin-top: 2px; font-size: 11px; }
+
+    /* Signal 片段托盘 */
+    .tray { min-height: 40px; border: 1px dashed var(--line); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px; background: var(--bg); }
+    .tray-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--c-fragment);
+      background: #f4f0e8;
+      border-radius: 14px;
+      padding: 1px 6px 1px 10px;
+      font-size: 12px;
+      margin: 2px 4px 2px 0;
+      max-width: 100%;
+    }
+    .tray-chip .tc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+    .tray-chip .tc-x {
+      border: none; background: none; cursor: pointer;
+      color: var(--muted); font-size: 13px; padding: 0 4px; line-height: 1;
+    }
+    .tray-chip .tc-x:hover { color: var(--st-invalid); }
+
+    /* Object 锚定列表 */
+    .anchor-box { max-height: 190px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; background: var(--card-bg); }
+    .anchor-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; border-bottom: 1px dashed var(--line); cursor: pointer; }
+    .anchor-item:last-child { border-bottom: none; }
+    .anchor-item input { accent-color: var(--c-signal); }
+    .anchor-item .a-name { font-weight: 600; }
+    .anchor-item .a-id { color: var(--muted); }
+    .anchor-new { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+    .anchor-new .f-select, .anchor-new .f-input { width: auto; flex: 0 1 auto; }
+    .anchor-new .f-input { flex: 1 1 160px; }
+
+    /* body 违禁词即时提示 */
+    .body-warn { font-size: 12px; color: var(--st-invalid); margin-top: 4px; min-height: 18px; }
+    .body-ok { color: var(--st-verified); }
+
+    /* 成功回执 */
+    .ok-box {
+      border: 1px solid var(--st-verified);
+      background: #eff0ea;
+      color: var(--st-verified);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .ok-box .ok-id { font-weight: 700; }
+    .ok-box a { color: var(--c-signal); font-weight: 600; }
+
+    /* confidence 滑杆 */
+    .conf-row { display: flex; align-items: center; gap: 10px; }
+    .conf-row input[type="range"] { flex: 1 1 auto; accent-color: var(--c-signal); }
+    .conf-row .conf-val { font-size: 14px; font-weight: 700; min-width: 44px; text-align: right; }
+
+    /* 会话录入日志 */
+    .log-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 12px; border-bottom: 1px dashed var(--line); }
+    .log-row:last-child { border-bottom: none; }
+    .log-row .l-time { color: var(--muted); flex: 0 0 auto; }
+    .log-row .l-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link" href="./index.html">总览</a>
+    <a class="nav-link active" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link" href="./trace.html">追溯</a>
+    <a class="nav-link" href="./objects.html">对象全景</a>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">录入台 · Intake</div>
+    <div class="page-sub">唯一入口：Evidence → Fragment → Signal → Object Anchor。禁止跳过链路，禁止混入判断。</div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <!-- 当前工作链 -->
+    <section class="card">
+      <h3>当前工作链</h3>
+      <div class="chain-strip" id="chain-strip"></div>
+    </section>
+
+    <!-- 第一步：录入 Evidence -->
+    <section class="card" id="step1">
+      <div class="step-head">
+        <span class="step-num s1">1</span>
+        <span class="step-title">录入 Evidence</span>
+        <span class="step-hint">保存原始证据原文 · 创建后不可改写 · 自动计算 checksum</span>
+      </div>
+      <form id="ev-form">
+        <div class="f-grid">
+          <div>
+            <label class="f-label" for="ev-source">来源 source <span class="req">*</span></label>
+            <select class="f-select" id="ev-source" required></select>
+          </div>
+          <div>
+            <label class="f-label" for="ev-creator">记录人 creator</label>
+            <input class="f-input" id="ev-creator" placeholder="选填" />
+          </div>
+        </div>
+        <label class="f-label" for="ev-content">原文 content <span class="req">*</span>（一字不改，保存现实原样）</label>
+        <textarea class="f-textarea" id="ev-content" required placeholder="粘贴会议纪要、邮件、PRD、ERP 导出等原文…"></textarea>
+        <details class="opt">
+          <summary>可选字段：source_id / version / chain_id</summary>
+          <div class="f-grid">
+            <div>
+              <label class="f-label" for="ev-source-id">source_id</label>
+              <input class="f-input" id="ev-source-id" placeholder="外部系统原始 ID" />
+            </div>
+            <div>
+              <label class="f-label" for="ev-version">version</label>
+              <input class="f-input num" id="ev-version" type="number" min="1" step="1" placeholder="证据版本号" />
+            </div>
+            <div>
+              <label class="f-label" for="ev-chain-id">chain_id</label>
+              <input class="f-input" id="ev-chain-id" placeholder="同一证据链标识" />
+            </div>
+          </div>
+        </details>
+        <div class="f-foot">
+          <button class="btn primary" type="submit" id="ev-submit">保存 Evidence 原文</button>
+          <span class="notice">不可变性：content 落库即冻结，协议不提供修改端点</span>
+          <span class="f-count num" id="ev-count">0 字</span>
+        </div>
+      </form>
+      <div id="ev-result"></div>
+    </section>
+
+    <!-- 第二步：截取 Fragment -->
+    <section class="card" id="step2">
+      <div class="step-head">
+        <span class="step-num s2">2</span>
+        <span class="step-title">从原文截取 Fragment</span>
+        <span class="step-hint">片段必须来自 Evidence 原文 · 划选文字自动带入内容与偏移</span>
+      </div>
+
+      <div class="f-grid">
+        <div class="span2">
+          <label class="f-label" for="fr-evidence">选择 Evidence <span class="req">*</span></label>
+          <select class="f-select" id="fr-evidence"></select>
+        </div>
+      </div>
+
+      <div id="fr-ev-text-wrap" hidden>
+        <label class="f-label">原文（在下方文本上划选要截取的片段）</label>
+        <div class="evidence-text sel-text" id="fr-ev-text"></div>
+      </div>
+      <p class="notice" id="fr-no-ev">暂无可用的 Evidence，请先完成第一步。</p>
+
+      <form id="fr-form" hidden>
+        <div class="f-grid">
+          <div>
+            <label class="f-label" for="fr-type">类型 type <span class="req">*</span></label>
+            <select class="f-select" id="fr-type" required></select>
+          </div>
+          <div>
+            <label class="f-label" for="fr-speaker">说话人 speaker</label>
+            <input class="f-input" id="fr-speaker" placeholder="选填" />
+          </div>
+          <div>
+            <label class="f-label" for="fr-start">start_offset</label>
+            <input class="f-input num" id="fr-start" readonly placeholder="划选后自动填入" />
+          </div>
+          <div>
+            <label class="f-label" for="fr-end">end_offset</label>
+            <input class="f-input num" id="fr-end" readonly placeholder="划选后自动填入" />
+          </div>
+        </div>
+        <label class="f-label" for="fr-content">片段内容 content <span class="req">*</span>（必须是原文子串，服务端会校验）</label>
+        <textarea class="f-textarea" id="fr-content" required style="min-height:60px"></textarea>
+        <details class="opt">
+          <summary>可选定位：timestamp / page / section</summary>
+          <div class="f-grid">
+            <div>
+              <label class="f-label" for="fr-ts-start">timestamp_start</label>
+              <input class="f-input num" id="fr-ts-start" placeholder="如 00:15:32" />
+            </div>
+            <div>
+              <label class="f-label" for="fr-ts-end">timestamp_end</label>
+              <input class="f-input num" id="fr-ts-end" placeholder="如 00:15:40" />
+            </div>
+            <div>
+              <label class="f-label" for="fr-page">page</label>
+              <input class="f-input num" id="fr-page" type="number" min="1" step="1" />
+            </div>
+            <div>
+              <label class="f-label" for="fr-section">section</label>
+              <input class="f-input" id="fr-section" placeholder="章节名" />
+            </div>
+          </div>
+        </details>
+        <div class="f-foot">
+          <button class="btn primary" type="submit" id="fr-submit">创建 Fragment</button>
+          <span class="notice">一个 Evidence 可截取多个 Fragment，一个 Fragment 可支撑多个 Signal</span>
+        </div>
+      </form>
+      <div id="fr-result"></div>
+
+      <div id="fr-list-wrap" hidden style="margin-top:14px">
+        <h3 style="margin:0 0 6px;font-size:13px;color:var(--muted)">该 Evidence 的 Fragment <span id="fr-list-count" class="num"></span></h3>
+        <div id="fr-list"></div>
+      </div>
+    </section>
+
+    <!-- 第三步：创建 Signal 并锚定 Object -->
+    <section class="card" id="step3">
+      <div class="step-head">
+        <span class="step-num s3">3</span>
+        <span class="step-title">创建 Signal 并锚定 Object</span>
+        <span class="step-hint">事实观察 · 至少 1 个 Fragment · 至少 1 个 Object 锚点</span>
+      </div>
+
+      <form id="sig-form">
+        <label class="f-label">支撑 Fragment <span class="req">*</span>（在第二步列表中点「选用」加入）</label>
+        <div class="tray" id="sig-tray"><span class="notice" id="tray-empty">尚未选用 Fragment。</span></div>
+
+        <label class="f-label" for="sig-body">观察 body <span class="req">*</span>（主体 + 当前行为 / 当前状态 / 已发生事实）</label>
+        <textarea class="f-textarea" id="sig-body" required style="min-height:60px" placeholder="例：仓库目前使用 Excel 进行盘点。"></textarea>
+        <div class="body-warn" id="sig-body-warn"></div>
+
+        <div class="f-grid">
+          <div>
+            <label class="f-label" for="sig-type">类型 type <span class="req">*</span></label>
+            <select class="f-select" id="sig-type" required></select>
+          </div>
+          <div class="span2">
+            <label class="f-label" for="sig-conf">confidence（抽取置信度，非业务重要性）<span class="req">*</span></label>
+            <div class="conf-row">
+              <input type="range" id="sig-conf" min="0" max="1" step="0.01" value="0.9" />
+              <span class="conf-val num" id="sig-conf-val">0.90</span>
+            </div>
+          </div>
+          <div>
+            <label class="f-label" for="sig-actors">相关者 actors</label>
+            <input class="f-input" id="sig-actors" placeholder="多人用逗号分隔" />
+          </div>
+          <div>
+            <label class="f-label" for="sig-occurred">发生时间 occurred_at</label>
+            <input class="f-input" id="sig-occurred" type="datetime-local" />
+          </div>
+        </div>
+
+        <details class="opt">
+          <summary>Context 发生环境（channel / source / organization / location / meeting / document / system）</summary>
+          <div class="f-grid">
+            <div><label class="f-label" for="ctx-channel">channel</label><input class="f-input" id="ctx-channel" placeholder="如 meeting" /></div>
+            <div><label class="f-label" for="ctx-source">source</label><input class="f-input" id="ctx-source" /></div>
+            <div><label class="f-label" for="ctx-org">organization</label><input class="f-input" id="ctx-org" /></div>
+            <div><label class="f-label" for="ctx-location">location</label><input class="f-input" id="ctx-location" /></div>
+            <div><label class="f-label" for="ctx-meeting">meeting</label><input class="f-input" id="ctx-meeting" /></div>
+            <div><label class="f-label" for="ctx-document">document</label><input class="f-input" id="ctx-document" /></div>
+            <div><label class="f-label" for="ctx-system">system</label><input class="f-input" id="ctx-system" /></div>
+          </div>
+        </details>
+
+        <label class="f-label">锚定 Object <span class="req">*</span>（勾选已有对象，或就地创建新对象）</label>
+        <div class="anchor-box" id="anchor-box"><p class="notice" style="margin:4px 0">加载中…</p></div>
+        <div class="anchor-new">
+          <select class="f-select" id="obj-type"></select>
+          <input class="f-input" id="obj-name" placeholder="新 Object 名称，如：仓库盘点流程" />
+          <button class="btn small" type="button" id="obj-create">创建并选用</button>
+        </div>
+
+        <div class="f-foot" style="margin-top:12px">
+          <button class="btn primary" type="submit" id="sig-submit">创建 Signal（状态 Captured）</button>
+          <span class="notice">创建后可在 Signal 工作台确认 Verified / 标记 Invalid</span>
+        </div>
+      </form>
+      <div id="sig-result"></div>
+    </section>
+
+    <!-- 本次会话录入日志 -->
+    <section class="card" id="session-card" hidden>
+      <h3>本次会话已录入 <span id="log-count" class="num"></span></h3>
+      <div id="log-list"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./intake.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — 对象全景</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* ===== 对象全景页自有样式（不动 styles.css） ===== */
+
+    /* Object 列表项 */
+    .obj-name { font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+    /* 类型筛选 */
+    .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .filter-row select {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--ink);
+    }
+
+    /* Timeline 投影（纯 SVG） */
+    .tl-wrap { overflow-x: auto; }
+    .tl-svg { display: block; width: 100%; min-width: 560px; height: auto; }
+    .tl-dot { cursor: pointer; }
+    .tl-range { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* Signal 表行可点击 */
+    table.tbl tr.row-link { cursor: pointer; }
+
+    /* Relation 链路行 */
+    .rel-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 7px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 12.5px;
+    }
+    .rel-row:last-child { border-bottom: none; }
+    .rel-row .rel-type {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--c-relation);
+      border: 1px solid var(--c-relation);
+      background: #f2f0ec;
+      border-radius: 10px;
+      padding: 0 8px;
+      white-space: nowrap;
+    }
+    .rel-row .rel-arrow { color: var(--muted); }
+    .rel-row .rel-src { color: var(--muted); font-size: 11px; margin-left: auto; }
+    .rel-row .rel-src a { color: var(--c-signal); }
+
+    .attrs-json {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link" href="./index.html">总览</a>
+    <a class="nav-link" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link" href="./trace.html">追溯</a>
+    <a class="nav-link active" href="./objects.html">对象全景</a>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">对象全景 · Object</div>
+    <div class="page-sub">Object 是 Reality Network 的组织中心 —— 信号聚合、时间线投影与事实关系一览</div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <div class="split">
+      <!-- 左栏：Object 列表 -->
+      <div class="col-list">
+        <div class="card">
+          <h3>Object 列表 <span id="obj-count" class="num"></span></h3>
+          <div class="filter-row">
+            <label for="type-filter" class="notice">类型</label>
+            <select id="type-filter">
+              <option value="全部">全部</option>
+              <option>Project</option>
+              <option>System</option>
+              <option>Department</option>
+              <option>Customer</option>
+              <option>Product</option>
+              <option>Document</option>
+              <option>Process</option>
+              <option>Person</option>
+              <option>Organization</option>
+              <option>Task</option>
+            </select>
+          </div>
+          <div id="obj-list"></div>
+        </div>
+      </div>
+
+      <!-- 右栏：对象全景详情 -->
+      <div class="col-detail">
+        <div class="card" id="obj-detail">
+          <h3>对象详情</h3>
+          <p class="notice" id="detail-placeholder">从左侧选择一个 Object，查看其信号聚合与时间线投影。</p>
+          <div id="detail-body" hidden></div>
+        </div>
+
+        <div class="card" id="obj-timeline" hidden>
+          <h3>Timeline 投影 <span class="notice" style="text-transform:none;letter-spacing:0">（由 Signal 查询生成，不可独立写入 · AC-014）</span></h3>
+          <div id="timeline-body"></div>
+        </div>
+
+        <div class="card" id="obj-signals" hidden>
+          <h3>关联 Signal <span id="sig-count" class="num"></span></h3>
+          <div id="signals-body"></div>
+        </div>
+
+        <div class="card" id="obj-relations" hidden>
+          <h3>事实关系 Relation <span id="rel-count" class="num"></span></h3>
+          <div id="relations-body"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./objects.js"></script>
+</body>
+</html>

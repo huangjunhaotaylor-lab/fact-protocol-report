@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — 总览 Reality Map</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link active" href="./index.html">总览</a>
+    <a class="nav-link" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link" href="./trace.html">追溯</a>
+    <a class="nav-link" href="./objects.html">对象全景</a>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">总览 · Reality Map</div>
+    <div class="page-sub">现实层核心链路实时状态：Evidence → Fragment → Signal → Object → Relation → Timeline</div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <!-- 空库引导 -->
+    <section id="empty-guide" class="card empty-guide" hidden>
+      <div class="eg-icon">◈</div>
+      <h2>Reality Layer 还是空的</h2>
+      <p>从录入第一条 Evidence 开始——一切信号都必须锚定现实证据。</p>
+      <a class="btn primary" href="./intake.html" data-tip="前往录入台录入 Evidence / Fragment / Signal">前往录入台</a>
+      <a class="btn" href="./evidence.html" style="margin-left:8px">查看证据库</a>
+    </section>
+
+    <!-- 协议原则徽标行 -->
+    <section class="card">
+      <h3>协议原则</h3>
+      <div class="principles">
+        <span class="principle" data-tip="Reality First：一切判断只能来自可追溯的现实证据，不允许凭空生成结论">Reality First</span>
+        <span class="principle" data-tip="全程可追溯：Signal → Fragment → Evidence 三级链路任意反查，Relation 必须 derived_from Signal">全程可追溯</span>
+        <span class="principle" data-tip="不可变：Evidence / Fragment 原文创建后不可改写，checksum 校验完整性；Invalid / Archived 记录永不物理删除">不可变</span>
+        <span class="principle" data-tip="对象中心：Object 是 Reality Network 的组织中心，Signal 必须锚定至少一个 Object">对象中心</span>
+        <span class="principle" data-tip="模型无关：协议不绑定任何 AI 模型，confidence 仅表示抽取置信度，不表示业务重要性">模型无关</span>
+      </div>
+    </section>
+
+    <!-- 核心链路流程图 -->
+    <section class="card">
+      <h3>核心链路</h3>
+      <div class="flow" id="flow"></div>
+    </section>
+
+    <!-- 状态分布 -->
+    <section class="card">
+      <h3>状态分布</h3>
+      <div id="state-bars"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

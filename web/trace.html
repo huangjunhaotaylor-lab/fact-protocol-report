@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — 追溯</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* ===== 追溯页自有样式（不动 styles.css） ===== */
+
+    /* Signal 列表项复用 .ev-item 结构，补充 confidence 数字 */
+    .sig-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 11px; color: var(--muted); }
+    .sig-meta .conf { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+    /* 状态筛选行 */
+    .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .filter-row .f-chip {
+      border: 1px solid var(--line);
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 1px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .filter-row .f-chip.on { color: var(--ink); font-weight: 600; border-color: var(--c-signal); background: #f7ece6; }
+
+    /* 证据链分支：Signal 根 → 每条链 Fragment → Evidence 三级 */
+    .chain-root { margin-bottom: 4px; }
+    .chain-branch {
+      position: relative;
+      margin: 0 0 16px 18px;
+      padding-left: 18px;
+      border-left: 2px solid var(--line);
+    }
+    .chain-branch::before {
+      content: "";
+      position: absolute;
+      left: -5px; top: 22px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--c-fragment);
+    }
+    .tier {
+      border: 1px solid var(--line);
+      border-left-width: 3px;
+      border-radius: var(--radius);
+      background: var(--card-bg);
+      padding: 10px 14px;
+      margin-bottom: 0;
+    }
+    .tier.t-signal   { border-left-color: var(--c-signal); }
+    .tier.t-fragment { border-left-color: var(--c-fragment); }
+    .tier.t-evidence { border-left-color: var(--c-evidence); }
+    .tier .tier-label {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tier .tier-body { font-size: 13px; margin-top: 3px; }
+    .tier .tier-id { font-weight: 700; }
+
+    /* 层间连接箭头（纯 CSS） */
+    .tier-connector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 0 2px 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .tier-connector svg { flex: 0 0 auto; }
+
+    /* Evidence 原文在追溯视图中的紧凑展示 */
+    .trace-evidence-text {
+      margin-top: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 12.5px;
+      line-height: 1.9;
+    }
+
+    .anchor-link { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link" href="./index.html">总览</a>
+    <a class="nav-link" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link active" href="./trace.html">追溯</a>
+    <a class="nav-link" href="./objects.html">对象全景</a>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">追溯 · Trace</div>
+    <div class="page-sub">Signal → Fragment → Evidence 全链路反查 —— 任何观察都必须能回到原始证据</div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <div class="split">
+      <!-- 左栏：Signal 列表 -->
+      <div class="col-list">
+        <div class="card">
+          <h3>Signal 列表 <span id="sig-count" class="num"></span></h3>
+          <div class="filter-row" id="state-filter"></div>
+          <div id="sig-list"></div>
+        </div>
+      </div>
+
+      <!-- 右栏：证据链追溯视图 -->
+      <div class="col-detail">
+        <div class="card" id="trace-detail">
+          <h3>证据链</h3>
+          <p class="notice" id="detail-placeholder">从左侧选择一个 Signal，查看它的完整证据链。</p>
+          <div id="detail-body" hidden></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./trace.js"></script>
+</body>
+</html>

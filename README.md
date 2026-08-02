@@ -40,3 +40,58 @@ git checkout -b feature/your-feature
 3. 开发并提交代码
 4. 合并回 `develop`
 5. 稳定后合并 `develop` → `main` 并打标签发布
+
+## Web 界面
+
+本仓库附带 BSP Reality Layer 的 Web 前端（`web/` 目录，零构建原生 ES Modules，无外部 CDN 依赖），由 Express 服务直接静态托管。
+
+### 六个页面
+
+| 页面 | 路径 | 说明 |
+| --- | --- | --- |
+| 总览 | `/static/index.html` | Reality Map：核心链路（Evidence → Fragment → Signal → Object → Relation → Timeline）实时状态与协议原则 |
+| 录入台 | `/static/intake.html` | Evidence / Fragment / Signal 统一录入 |
+| 证据库 | `/static/evidence.html` | Evidence 列表、原文查看与 Fragment 划取 |
+| Signal 工作台 | `/static/signals.html` | Signal 校验（Verify）、标记 Invalid、归档 |
+| 追溯 | `/static/trace.html` | Signal → Fragment → Evidence 全链路反查 |
+| 对象全景 | `/static/objects.html` | Object 信号聚合、Timeline 与 Relation 视图 |
+
+访问 `/` 会自动重定向到总览页。六个页面导航栏完全互通。
+
+### 启动方式
+
+```bash
+npm install
+npm run build
+npm start
+```
+
+服务默认监听 **3000** 端口（见 `src/index.ts`，可用环境变量 `PORT` 覆盖），启动后打开 http://localhost:3000/ 即可。
+
+开发模式可使用 `npm run dev`（tsx watch 热重载）。
+
+### 演示数据
+
+仓库提供演示种子脚本，通过 HTTP 调用本地 API 构造完整中文业务链路（会议纪要 / PRD / 邮件三类 Evidence，五种 Signal 类型与 Captured / Verified / Invalid 状态，四类 Object 与 Relation）：
+
+```bash
+# 确认服务已启动后运行
+node scripts/seed-demo.mjs
+```
+
+- 目标地址可用环境变量覆盖：`BSP_API_BASE`（完整地址），或 `BSP_HOST` / `BSP_PORT`。
+- **注意：脚本非幂等**，重复运行会产生重复数据；重跑前请停止服务并删除 `data/bsp-store.json`，再重启服务。
+
+### 持久化
+
+默认使用 JSON 文件持久化（`src/repositories/json-file-store.ts`）：
+
+- 存储文件：`data/bsp-store.json`（随服务运行自动创建与保存）
+- 可用环境变量 `BSP_STORE_PATH` 覆盖存储路径
+- 测试环境（vitest / `NODE_ENV=test`）且未显式指定 `BSP_STORE_PATH` 时使用纯内存存储，不污染数据文件
+
+### 测试
+
+```bash
+npm test   # vitest，38 个用例（含 JSON 持久化测试）
+```

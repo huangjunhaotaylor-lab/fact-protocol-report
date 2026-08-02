@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — Signal 工作台</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* ===== Signal 工作台自有样式（不动 styles.css） ===== */
+
+    /* 工具条 */
+    .tb-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .tb-row label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .tb-row select, .tb-row input {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card-bg);
+      padding: 5px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--ink);
+    }
+    .tb-row select:focus, .tb-row input:focus { outline: none; border-color: var(--c-signal); }
+    .tb-row input { flex: 1 1 200px; min-width: 160px; }
+    .tb-count { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+    /* 四列看板 */
+    .board-wrap { overflow-x: auto; padding-bottom: 8px; }
+    .board { display: flex; gap: 14px; align-items: flex-start; min-width: 980px; }
+    .board-col {
+      flex: 1 1 0;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-top-width: 3px;
+      border-radius: var(--radius);
+      background: var(--bg);
+      padding: 10px;
+    }
+    .board-col.col-Captured { border-top-color: var(--st-captured); }
+    .board-col.col-Verified { border-top-color: var(--st-verified); }
+    .board-col.col-Invalid  { border-top-color: var(--st-invalid); }
+    .board-col.col-Archived { border-top-color: var(--st-archived); }
+    .col-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+    .col-head .col-name { font-size: 13px; font-weight: 700; }
+    .col-head .col-name small { font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .col-head .col-count { font-size: 13px; color: var(--muted); }
+    .col-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 14px 4px; }
+
+    /* Signal 卡片 */
+    .sig-card {
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .sig-card:last-child { margin-bottom: 0; }
+    .sig-card.hl { border-color: var(--c-signal); border-left-width: 3px; }
+    .sc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .sc-id { font-size: 12px; font-weight: 600; }
+    .sc-body {
+      font-size: 13px;
+      margin-top: 5px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sc-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 6px; font-size: 11px; color: var(--muted);
+    }
+    .sc-anchors { margin-top: 6px; font-size: 11px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .sc-ctx { margin-top: 6px; font-size: 11px; color: var(--muted); line-height: 1.7; }
+    .sc-ctx .ck { color: var(--muted); }
+    .sc-ctx .cv { color: var(--ink); }
+
+    /* 类型徽标：五色低饱和（不动 styles.css，类名 sig-*） */
+    .badge.sig-observation { color: var(--c-signal);   border-color: var(--c-signal);   background: #f7ece6; }
+    .badge.sig-event       { color: var(--c-evidence); border-color: var(--c-evidence); background: #f5ede3; }
+    .badge.sig-change      { color: var(--c-object);   border-color: var(--c-object);   background: #eff0ea; }
+    .badge.sig-status      { color: var(--c-timeline); border-color: var(--c-timeline); background: #edefec; }
+    .badge.sig-action      { color: #8a7c62;           border-color: #b8ab97;           background: #f4f0e8; }
+
+    /* 操作区：状态机即 UI */
+    .sc-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .sc-actions .btn-verify  { border-color: var(--st-verified); color: var(--st-verified); }
+    .sc-actions .btn-verify:hover { background: #eff0ea; }
+    .sc-actions .btn-invalid { border-color: var(--st-invalid); color: var(--st-invalid); }
+    .sc-actions .btn-invalid:hover { background: #f7ece6; }
+    .sc-actions .btn-archive { border-color: var(--st-archived); color: var(--muted); }
+    .sc-actions .btn-archive:hover { background: #f4f1ea; }
+    .sc-noop { font-size: 11px; color: var(--muted); }
+
+    /* 底部链接行 */
+    .sc-foot {
+      margin-top: 8px; padding-top: 7px;
+      border-top: 1px dashed var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px;
+    }
+    .frag-toggle {
+      border: none; background: none; padding: 0;
+      color: var(--c-fragment); font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    .frag-toggle:hover { color: var(--c-evidence); text-decoration: underline; }
+
+    /* Fragment 展开区 */
+    .sc-frags { margin-top: 8px; }
+    .sc-frags .frag-loading { font-size: 12px; color: var(--muted); }
+    .frag-row { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12px; }
+    .frag-row:last-child { border-bottom: none; }
+    .frag-row .fr-main { flex: 1 1 auto; min-width: 0; }
+    .frag-row .fr-id { font-weight: 600; }
+    .frag-row .fr-content { margin-top: 2px; }
+    .frag-row .fr-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link" href="./index.html">总览</a>
+    <a class="nav-link" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link active" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link" href="./trace.html">追溯</a>
+    <a class="nav-link" href="./objects.html">对象全景</a>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">Signal 工作台 · Workbench</div>
+    <div class="page-sub">状态机即 UI：Captured → Verified / Invalid → Archived —— 协议禁止物理删除（AC-011），一切流转仅状态变更</div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <!-- 空库引导 -->
+    <section id="empty-guide" class="card empty-guide" hidden>
+      <div class="eg-icon">◈</div>
+      <h2>还没有任何 Signal</h2>
+      <p>Signal 是事实观察，必须引用 Fragment 并锚定 Object。前往录入台建立第一条 Evidence → Fragment → Signal 链路。</p>
+      <a class="btn primary" href="./intake.html">前往录入台</a>
+    </section>
+
+    <!-- 工具条 -->
+    <section class="card" id="toolbar" hidden>
+      <div class="tb-row">
+        <label>类型
+          <select id="type-filter">
+            <option value="全部">全部</option>
+            <option value="observation">observation</option>
+            <option value="event">event</option>
+            <option value="change">change</option>
+            <option value="status">status</option>
+            <option value="action">action</option>
+          </select>
+        </label>
+        <label>排序
+          <select id="sort-mode">
+            <option value="time">捕获时间 新→旧</option>
+            <option value="conf-desc">confidence 高→低</option>
+            <option value="conf-asc">confidence 低→高</option>
+          </select>
+        </label>
+        <input id="kw" type="search" placeholder="搜索 body 关键词…" />
+        <span class="tb-count num" id="total-count"></span>
+      </div>
+    </section>
+
+    <!-- 四列看板 -->
+    <div class="board-wrap" id="board-wrap" hidden>
+      <div class="board" id="board"></div>
+    </div>
+  </main>
+
+  <script type="module" src="./signals.js"></script>
+</body>
+</html>
