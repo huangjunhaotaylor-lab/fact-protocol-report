@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G1 图引擎验证台 · Business Graph OS</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="./graph.css">
+</head>
+<body class="graph-harness">
+
+<header class="gh-top">
+  <div class="gh-title">
+    G1 图引擎验证台
+    <small>Business Graph OS · mock 300 节点 / 500 边 · 不接真实 API</small>
+  </div>
+  <div class="seg" id="sizingSeg" data-tip="节点尺寸编码">
+    <button data-mode="fixed" class="on">固定</button>
+    <button data-mode="confidence">置信度</button>
+    <button data-mode="degree">连接度</button>
+  </div>
+  <button class="btn small" id="btnFit">适配全图</button>
+  <button class="btn small" id="btnPng">导出 PNG</button>
+  <button class="btn small" id="btnClear">清除选择</button>
+</header>
+
+<main class="gh-main">
+  <div class="graph-canvas-wrap" id="wrap">
+    <canvas id="graph" class="graph-canvas"></canvas>
+
+    <div class="graph-fps" id="fpsPanel">
+      <div class="row"><span>FPS</span><span class="v" id="fpsVal">—</span></div>
+      <div class="row"><span>节点 / 边</span><span class="v" id="cntVal">—</span></div>
+      <div class="row"><span>布局</span><span class="v" id="layoutVal">—</span></div>
+      <div class="row"><span>已选</span><span class="v" id="selVal">0</span></div>
+      <div class="row"><span>缩放</span><span class="v" id="zoomVal">1.00x</span></div>
+    </div>
+
+    <div class="gh-hint">拖节点 · 空白拖拽平移 · 滚轮缩放 · Shift+拖拽框选 · 双击聚焦 · 右键菜单 · Esc 清除</div>
+
+    <div class="graph-tip" id="tip" hidden></div>
+    <div class="graph-menu" id="menu" hidden></div>
+  </div>
+</main>
+
+<footer class="graph-timebar gh-timebar">
+  <div class="gt-head">
+    <span>⏱ 时间直方图滑杆</span>
+    <span class="gt-window-label num" id="twLabel">全时段</span>
+    <button class="btn small" id="twReset">重置</button>
+  </div>
+  <div class="gt-track" id="gtTrack">
+    <canvas class="gt-histo" id="histo"></canvas>
+    <div class="gt-window" id="twWindow"></div>
+    <input type="range" id="twMin" min="0" max="1000" step="1" value="0" aria-label="时间窗起点">
+    <input type="range" id="twMax" min="0" max="1000" step="1" value="1000" aria-label="时间窗终点">
+  </div>
+  <div class="gt-scale"><span id="t0Label"></span><span id="t1Label"></span></div>
+</footer>
+
+<script type="module" src="./harness.js"></script>
+</body>
+</html>

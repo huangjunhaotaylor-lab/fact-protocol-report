@@ -96,6 +96,15 @@ a:hover { text-decoration: underline; }
 }
 .nav a.nav-link.soon { opacity: 0.55; cursor: default; }
 .nav a.nav-link.soon:hover { background: none; color: var(--muted); }
+/* Graph OS 默认入口：陶土描边强调 */
+.nav a.nav-link.nav-graph {
+  color: var(--c-signal);
+  font-weight: 600;
+  border: 1px solid var(--c-signal);
+  border-radius: 6px;
+  margin-right: 6px;
+}
+.nav a.nav-link.nav-graph:hover { background: var(--c-signal); color: #fffdf9; text-decoration: none; }
 
 /* ---------- 布局 ---------- */
 .page { max-width: 1160px; margin: 0 auto; padding: 20px; }

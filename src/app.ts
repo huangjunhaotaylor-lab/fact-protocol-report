@@ -9,6 +9,7 @@ import { fragmentRoutes } from './routes/fragment.routes';
 import { signalRoutes } from './routes/signal.routes';
 import { objectRoutes } from './routes/object.routes';
 import { relationRoutes } from './routes/relation.routes';
+import { graphRoutes } from './routes/graph.routes';
 import { logger } from './utils/logger';
 
 export function createApp(): Application {
@@ -34,6 +35,7 @@ export function createApp(): Application {
   app.use('/api/signals', signalRoutes);
   app.use('/api/objects', objectRoutes);
   app.use('/api/relations', relationRoutes);
+  app.use('/api/graph', graphRoutes);
 
   // 统一错误处理
   app.use(
