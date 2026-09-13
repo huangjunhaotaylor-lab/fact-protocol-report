@@ -45,7 +45,16 @@ git checkout -b feature/your-feature
 
 本仓库附带 BSP Reality Layer 的 Web 前端（`web/` 目录，零构建原生 ES Modules，无外部 CDN 依赖），由 Express 服务直接静态托管。
 
-### 六个页面
+### Business Graph OS（默认入口）
+
+`web/graph/` 是新一代图工作区，访问 `/static/graph/graph.html`（旧六页导航栏首位「◆ Graph OS」链接直达）：
+
+- **三种模式一句话**：探索模式搜索命中节点、双击逐层展开业务图谱；研判模式用过滤器与时间直方图滑杆俯瞰全集、聚焦关键子图；追溯模式从任一 Signal 一键反查 Fragment → Evidence 原文定位，全程可视。
+- 自研 Canvas 2D 图引擎（`engine.js`，零依赖）：velocity-verlet 力导向布局、网格桶斥力优化、相机缓动、小地图、框选/钉住/时间窗显隐过渡。
+- 数据来自只读图投影层（`src/queries/graph.projection.ts` + `/api/graph*` 路由），不改动任何既有写路径。
+- 旧六页（见下表）定位为**管理视图**：录入、校验、列表管理仍在旧页完成，graph.html 顶栏「管理视图 →」可反向跳转。
+
+### 六个页面（管理视图）
 
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
