@@ -1280,12 +1280,12 @@ async function init() {
       sel.append(opt);
     }
 
-    if (total > 0 && total <= 300) {
+    if (total > 0 && total <= 1500) {
       const g = await api('/api/graph');
       addToGraph(g.nodes, g.edges, { fade: false });
       engine.zoomToFit();
       if (g.truncated) toast(`图较大，已截断显示 ${g.nodes.length}/${g.total} 节点`);
-    } else if (total > 300) {
+    } else if (total > 1500) {
       updateEmptyState(); // Bloom 式搜索引导空态
     } else {
       updateEmptyState();
