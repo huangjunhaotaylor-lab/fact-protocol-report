@@ -9,7 +9,7 @@
     /* ===== 对象全景页自有样式（不动 styles.css） ===== */
 
     /* Object 列表项 */
-    .obj-name { font-size: 13px; font-weight: 600; margin-top: 2px; }
+    .obj-name { font-size: 13px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
 
     /* 类型筛选 */
     .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -78,8 +78,10 @@
   </nav>
 
   <main class="page">
-    <div class="page-title">对象全景 · Object</div>
-    <div class="page-sub">Object 是 Reality Network 的组织中心 —— 信号聚合、时间线投影与事实关系一览</div>
+    <header class="page-head">
+      <div class="page-title">对象全景 · Object</div>
+      <div class="page-sub">Object 是 Reality Network 的组织中心 —— 信号聚合、时间线投影与事实关系一览</div>
+    </header>
 
     <div id="error" class="error-box" hidden></div>
 

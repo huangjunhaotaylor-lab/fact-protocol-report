@@ -76,7 +76,7 @@
     .frag-row:last-child { border-bottom: none; }
     .frag-row .fr-main { flex: 1 1 auto; min-width: 0; }
     .frag-row .fr-id { font-weight: 600; }
-    .frag-row .fr-content { color: var(--ink); margin-top: 2px; }
+    .frag-row .fr-content { color: var(--ink); margin-top: 2px; overflow-wrap: anywhere; }
     .frag-row .fr-meta { color: var(--muted); margin-top: 2px; font-size: 11px; }
 
     /* Signal 片段托盘 */
@@ -91,7 +91,7 @@
       margin: 2px 4px 2px 0;
       max-width: 100%;
     }
-    .tray-chip .tc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+    .tray-chip .tc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(320px, 56vw); }
     .tray-chip .tc-x {
       border: none; background: none; cursor: pointer;
       color: var(--muted); font-size: 13px; padding: 0 4px; line-height: 1;
@@ -151,8 +151,10 @@
   </nav>
 
   <main class="page">
-    <div class="page-title">录入台 · Intake</div>
-    <div class="page-sub">唯一入口：Evidence → Fragment → Signal → Object Anchor。禁止跳过链路，禁止混入判断。</div>
+    <header class="page-head">
+      <div class="page-title">录入台 · Intake</div>
+      <div class="page-sub">唯一入口：Evidence → Fragment → Signal → Object Anchor。禁止跳过链路，禁止混入判断。</div>
+    </header>
 
     <div id="error" class="error-box" hidden></div>
 

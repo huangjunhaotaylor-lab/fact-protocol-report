@@ -61,8 +61,8 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-    .tier .tier-body { font-size: 13px; margin-top: 3px; }
-    .tier .tier-id { font-weight: 700; }
+    .tier .tier-body { font-size: 13px; margin-top: 3px; overflow-wrap: anywhere; }
+    .tier .tier-id { font-weight: 700; overflow-wrap: anywhere; word-break: break-all; }
 
     /* 层间连接箭头（纯 CSS） */
     .tier-connector {
@@ -100,8 +100,10 @@
   </nav>
 
   <main class="page">
-    <div class="page-title">追溯 · Trace</div>
-    <div class="page-sub">Signal → Fragment → Evidence 全链路反查 —— 任何观察都必须能回到原始证据</div>
+    <header class="page-head">
+      <div class="page-title">追溯 · Trace</div>
+      <div class="page-sub">Signal → Fragment → Evidence 全链路反查 —— 任何观察都必须能回到原始证据</div>
+    </header>
 
     <div id="error" class="error-box" hidden></div>
 
