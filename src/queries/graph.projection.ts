@@ -475,6 +475,20 @@ const SEARCH_ATTR_MAP: Record<string, 'state' | 'type' | 'source'> = {
   来源: 'source',
 };
 
+/** 节点类型中文别名 → 英文 kind */
+const SEARCH_KIND_ALIAS: Record<string, GraphNodeKind> = {
+  证据: 'Evidence', 片段: 'Fragment', 信号: 'Signal', 对象: 'Object', 关系: 'Relation',
+};
+
+/** 属性值中文别名 → 英文值（状态 / 对象类型 / 信号类型） */
+const SEARCH_VALUE_ALIAS: Record<string, string> = {
+  待核: 'captured', 已核: 'verified', 无效: 'invalid', 已归档: 'archived', 归档: 'archived',
+  已创建: 'created', 活跃: 'active', 已合并: 'merged',
+  客户: 'customer', 部门: 'department', 项目: 'project', 系统: 'system',
+  文档: 'document', 人员: 'person', 产品: 'product',
+  观察: 'observation', 事件: 'event', 变更: 'change', 行动: 'action',
+};
+
 /** 全文匹配的候选文本（label / body / name / content 前 200 字） */
 function fullTextOf(node: GraphNode): string {
   const data = node.data as { body?: unknown; name?: unknown; content?: unknown };
@@ -510,14 +524,17 @@ export function searchGraph(query: string, kind?: string): GraphSearchResult {
     candidates = candidates.filter((n) => n.kind === kind);
   }
 
-  // 尝试解析「类型 + 属性中文名 + 值」结构化短语
+  // 尝试解析「类型 + 属性中文名 + 值」结构化短语（kind 与值均支持中文别名）
   const tokens = q.split(/\s+/);
   let hits: GraphNode[];
-  if (tokens.length >= 3 && GRAPH_NODE_KINDS.includes(tokens[0] as GraphNodeKind)) {
-    const phraseKind = tokens[0] as GraphNodeKind;
+  const kindTok = SEARCH_KIND_ALIAS[tokens[0]]
+    ?? (GRAPH_NODE_KINDS.includes(tokens[0] as GraphNodeKind) ? (tokens[0] as GraphNodeKind) : undefined);
+  if (tokens.length >= 3 && kindTok) {
+    const phraseKind = kindTok;
     const attr = SEARCH_ATTR_MAP[tokens[1]];
     if (attr) {
-      const value = tokens.slice(2).join(' ').toLowerCase();
+      const rawValue = tokens.slice(2).join(' ').toLowerCase();
+      const value = SEARCH_VALUE_ALIAS[rawValue] ?? rawValue;
       hits = full.nodes.filter((n) => {
         if (n.kind !== phraseKind) return false;
         if (kind && n.kind !== kind) return false;

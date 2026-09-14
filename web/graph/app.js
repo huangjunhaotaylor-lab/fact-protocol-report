@@ -60,6 +60,20 @@ const KIND_BADGE_CLS = {
   Object: 'k-Object', Relation: 'k-Relation',
 };
 
+/** 状态中文映射（数据值保持英文，仅展示层翻译） */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const zhState = (s) => STATE_CN[s] || s;
+
+/** 对象类型中文映射（数据值保持英文，仅展示层翻译） */
+const OBJTYPE_CN = {
+  Project: '项目', Department: '部门', Customer: '客户',
+  System: '系统', Document: '文档', Person: '人员', Product: '产品',
+};
+const zhObjType = (t) => OBJTYPE_CN[t] || t;
+
 /* ------------------------------------------------------------
    2. 应用状态
    ------------------------------------------------------------ */
@@ -293,16 +307,16 @@ function stateOpsFor(nd) {
   const ops = [];
   if (nd.kind === 'Signal') {
     if (nd.state === 'Captured') {
-      ops.push({ label: '核认 Verified', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/verify`, { method: 'POST' }) });
-      ops.push({ label: '标记 Invalid', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/invalid`, { method: 'POST' }) });
+      ops.push({ label: '核认为「已核」', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/verify`, { method: 'POST' }) });
+      ops.push({ label: '标记为「无效」', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/invalid`, { method: 'POST' }) });
     } else if (nd.state === 'Verified') {
-      ops.push({ label: '归档 Archived', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/archive`, { method: 'PATCH' }) });
+      ops.push({ label: '归档', run: () => api(`/api/signals/${encodeURIComponent(nd.id)}/archive`, { method: 'PATCH' }) });
     }
   } else if (nd.kind === 'Object') {
     if (nd.state === 'Created') {
-      ops.push({ label: '激活 Active', run: () => api(`/api/objects/${encodeURIComponent(nd.id)}/activate`, { method: 'PATCH' }) });
+      ops.push({ label: '激活', run: () => api(`/api/objects/${encodeURIComponent(nd.id)}/activate`, { method: 'PATCH' }) });
     } else if (nd.state === 'Active') {
-      ops.push({ label: '归档 Archived', run: () => api(`/api/objects/${encodeURIComponent(nd.id)}/archive`, { method: 'PATCH' }) });
+      ops.push({ label: '归档', run: () => api(`/api/objects/${encodeURIComponent(nd.id)}/archive`, { method: 'PATCH' }) });
     }
   }
   return ops;
@@ -317,7 +331,7 @@ async function doStateOp(nd, op) {
     const m = state.master.nodes.get(nd.id);
     if (m) { m.state = updated.state; m.data = updated; }
     applyFilters(); // 状态可能影响过滤（如 Archived chip）
-    toast(`已更新为 ${updated.state}`);
+    toast(`已更新为「${zhState(updated.state)}」`);
     if (!state.trace) {
       const cur = engine.nodeById.get(nd.id);
       if (cur && engine.getSelection().some((s) => s.id === nd.id)) renderInspector(cur);
@@ -441,7 +455,7 @@ function renderInspector(nd) {
   const head = el('div', 'bi-nodehead');
   head.append(el('span', `badge kind ${KIND_BADGE_CLS[nd.kind]}`, nd.kind));
   head.append(el('span', 'bi-label', nd.label || nd.id));
-  if (nd.state) head.append(el('span', `badge state st-${nd.state}`, nd.state));
+  if (nd.state) head.append(el('span', `badge state st-${nd.state}`, zhState(nd.state)));
   body.append(head);
 
   // Evidence / Fragment：checksum 校验
@@ -491,6 +505,11 @@ function renderInspector(nd) {
   for (const [key, label] of fields) {
     let v = d[key];
     if (v == null || v === '') continue;
+    if (key === 'state') v = zhState(v);
+    if (key === 'type' && nd.kind === 'Object') v = zhObjType(v);
+    if (key === 'type' && nd.kind === 'Signal') {
+      v = ({ observation: '观察', event: '事件', change: '变更', status: '状态', action: '行动' })[v] || v;
+    }
     if (key === 'checksum') v = String(v).slice(0, 16) + '…';
     if (Array.isArray(v)) v = v.join('、');
     table.append(propRow(label, v));
@@ -787,7 +806,7 @@ function traceCard(kind, id, text, st, active, onClick) {
   const card = el('button', `tc-card tc-${kind}${active ? ' active' : ''}`);
   const head = el('div', 'tc-cardhead');
   head.append(el('span', `badge kind ${KIND_BADGE_CLS[kind]}`, kind));
-  if (st) head.append(el('span', `badge state st-${st}`, st));
+  if (st) head.append(el('span', `badge state st-${st}`, zhState(st)));
   card.append(head, el('div', 'tc-cardtext', text), el('div', 'tc-cardid', id));
   card.addEventListener('click', onClick);
   return card;
@@ -1135,7 +1154,7 @@ function renderTip(nd, x, y) {
   tip.append(el('div', 'tt-label', nd.label || nd.id));
   const meta = el('div', 'tt-meta');
   const rows = [];
-  if (nd.state) rows.push(['状态', nd.state]);
+  if (nd.state) rows.push(['状态', zhState(nd.state)]);
   if (nd.type) rows.push(['类型', nd.type]);
   const ts = nd.captured_at ?? nd.occurred_at ?? nd.created_at;
   if (ts) rows.push(['时间', fmtTime(ts)]);
@@ -1286,7 +1305,7 @@ async function init() {
     const objTypes = (stats.type_counts && stats.type_counts.Object) || {};
     const sel = $('objTypeSel');
     for (const t of Object.keys(objTypes).sort()) {
-      const opt = el('option', null, `${t}（${objTypes[t]}）`);
+      const opt = el('option', null, `${zhObjType(t)}（${objTypes[t]}）`);
       opt.value = t;
       sel.append(opt);
     }

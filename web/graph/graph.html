@@ -21,7 +21,7 @@
     <div class="bgo-search" role="search">
       <span class="bgo-search-ico">🔍</span>
       <input id="searchInput" type="search" autocomplete="off" spellcheck="false"
-        placeholder="试试：Object 类型 Customer / Signal 状态 Captured / 任意关键词"
+        placeholder="试试：对象 类型 客户 / 信号 状态 待核 / 任意关键词"
         aria-label="图搜索">
     </div>
 
@@ -58,25 +58,25 @@
 
       <section class="bf-group">
         <div class="bf-title">节点类型</div>
-        <label class="bf-check" data-kind="Evidence"><input type="checkbox" checked><span class="dot k-Evidence"></span>Evidence<span class="bf-count" data-count="Evidence">0</span></label>
-        <label class="bf-check" data-kind="Fragment"><input type="checkbox" checked><span class="dot k-Fragment"></span>Fragment<span class="bf-count" data-count="Fragment">0</span></label>
-        <label class="bf-check" data-kind="Signal"><input type="checkbox" checked><span class="dot k-Signal"></span>Signal<span class="bf-count" data-count="Signal">0</span></label>
-        <label class="bf-check" data-kind="Object"><input type="checkbox" checked><span class="dot k-Object"></span>Object<span class="bf-count" data-count="Object">0</span></label>
-        <label class="bf-check" data-kind="Relation"><input type="checkbox" checked><span class="dot k-Relation"></span>Relation<span class="bf-count" data-count="Relation">0</span></label>
+        <label class="bf-check" data-kind="Evidence"><input type="checkbox" checked><span class="dot k-Evidence"></span>证据<span class="bf-count" data-count="Evidence">0</span></label>
+        <label class="bf-check" data-kind="Fragment"><input type="checkbox" checked><span class="dot k-Fragment"></span>片段<span class="bf-count" data-count="Fragment">0</span></label>
+        <label class="bf-check" data-kind="Signal"><input type="checkbox" checked><span class="dot k-Signal"></span>信号<span class="bf-count" data-count="Signal">0</span></label>
+        <label class="bf-check" data-kind="Object"><input type="checkbox" checked><span class="dot k-Object"></span>对象<span class="bf-count" data-count="Object">0</span></label>
+        <label class="bf-check" data-kind="Relation"><input type="checkbox" checked><span class="dot k-Relation"></span>关系<span class="bf-count" data-count="Relation">0</span></label>
       </section>
 
       <section class="bf-group">
-        <div class="bf-title">Signal 状态</div>
+        <div class="bf-title">信号状态</div>
         <div class="bf-chips" id="sigStateChips">
-          <button class="chip on" data-state="Captured">Captured</button>
-          <button class="chip on" data-state="Verified">Verified</button>
-          <button class="chip on" data-state="Invalid">Invalid</button>
-          <button class="chip on" data-state="Archived">Archived</button>
+          <button class="chip on" data-state="Captured">待核</button>
+          <button class="chip on" data-state="Verified">已核</button>
+          <button class="chip on" data-state="Invalid">无效</button>
+          <button class="chip on" data-state="Archived">已归档</button>
         </div>
       </section>
 
       <section class="bf-group">
-        <div class="bf-title">Object 类型</div>
+        <div class="bf-title">对象类型</div>
         <select id="objTypeSel" class="bf-select">
           <option value="">全部类型</option>
         </select>
@@ -124,9 +124,9 @@
           <div class="be-title">从搜索开始你的探索</div>
           <div class="be-hint">搜索命中节点落入画布，双击逐层展开它的世界</div>
           <div class="be-examples" id="emptyExamples">
-            <button class="be-chip" data-q="Signal 状态 Captured">Signal 状态 Captured</button>
-            <button class="be-chip" data-q="Object 类型 Customer">Object 类型 Customer</button>
-            <button class="be-chip" data-q="Evidence 来源 meeting">Evidence 来源 meeting</button>
+            <button class="be-chip" data-q="信号 状态 待核">信号 状态 待核</button>
+            <button class="be-chip" data-q="对象 类型 客户">对象 类型 客户</button>
+            <button class="be-chip" data-q="证据 来源 meeting">证据 来源 meeting</button>
           </div>
         </div>
       </div>
