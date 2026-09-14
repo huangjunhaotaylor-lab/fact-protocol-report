@@ -215,7 +215,8 @@ async function doSearch(q) {
   try {
     const r = await api(`/api/graph/search?q=${encodeURIComponent(query)}`);
     if (!r.total) {
-      toast('未命中任何节点');
+      toast(`未命中「${query}」相关节点`, 'warn');
+      flashSearchMiss();
       return;
     }
     addToGraph(r.nodes, r.edges);
@@ -1099,15 +1100,25 @@ function closeSceneMenu() { $('sceneMenu').hidden = true; }
    11. 杂项 UI（toast / 空态 / 加载 / 提示 / 折叠 / 键盘）
    ------------------------------------------------------------ */
 
-function toast(msg) {
+function toast(msg, type) {
   const box = $('toasts');
-  const t = el('div', 'bgo-toast', msg);
+  const t = el('div', 'bgo-toast' + (type === 'warn' ? ' warn' : ''), msg);
   box.append(t);
   requestAnimationFrame(() => t.classList.add('show'));
   setTimeout(() => {
     t.classList.add('fade');
     setTimeout(() => t.remove(), 400);
-  }, 1600); // ≈2s 淡出
+  }, type === 'warn' ? 3000 : 1600); // warn 停留更久
+}
+
+/** 搜索未命中：搜索框抖动反馈 */
+function flashSearchMiss() {
+  const box = $('searchInput').closest('.bgo-search');
+  if (!box) return;
+  box.classList.remove('miss');
+  void box.offsetWidth; // 重启动画
+  box.classList.add('miss');
+  setTimeout(() => box.classList.remove('miss'), 700);
 }
 
 function showLoading(on) { $('loading').hidden = !on; }
