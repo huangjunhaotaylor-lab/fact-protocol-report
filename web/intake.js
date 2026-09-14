@@ -32,6 +32,14 @@ const OBJECT_TYPES = [
   ['Organization', '组织'], ['Task', '任务'],
 ];
 
+/** 展示层中文映射：数据值一律保持英文，未命中原样显示 */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const KIND_CN = { Evidence: '证据', Fragment: '片段', Signal: '信号', Object: '对象' };
+const zh = (map, v) => map[v] || v;
+
 /** 协议 §10 判断类违禁表达（与服务端 signal-body.validator 对齐，用于即时提示） */
 const FORBIDDEN_TERMS = [
   '存在严重问题', '风险较高', '建议', '应该', '需要优化',
@@ -103,7 +111,7 @@ function renderLog() {
     .map(
       (it) => `<div class="log-row">
       <span class="l-time num">${it.time.toLocaleTimeString('zh-CN', { hour12: false })}</span>
-      <span class="badge ${badgeClass[it.kind] || 'relation'}">${esc(it.kind)}</span>
+      <span class="badge ${badgeClass[it.kind] || 'relation'}">${esc(zh(KIND_CN, it.kind))}</span>
       <span class="mono">${esc(it.id)}</span>
       <span class="l-label">${esc(it.label)}</span>
     </div>`,
@@ -143,7 +151,7 @@ function initEvidenceForm() {
       $('ev-result').innerHTML = `<div class="ok-box">
         Evidence 已保存：<span class="ok-id mono">${esc(ev.id)}</span>
         · checksum <span class="mono">${esc(ev.checksum.slice(0, 16))}…</span>
-        · 状态 <span class="badge st-${esc(ev.state)}">${esc(ev.state)}</span>
+        · 状态 <span class="badge st-${esc(ev.state)}">${esc(zh(STATE_CN, ev.state))}</span>
         · 原文已冻结，不可改写
       </div>`;
       $('ev-form').reset();
@@ -261,7 +269,7 @@ function renderFragmentList() {
         <div class="fr-main">
           <div><span class="fr-id mono">${esc(f.id)}</span>
             <span class="badge fragment">${esc(t ? t[1] : f.type)}</span>
-            <span class="badge st-${esc(f.state)}">${esc(f.state)}</span></div>
+            <span class="badge st-${esc(f.state)}">${esc(zh(STATE_CN, f.state))}</span></div>
           <div class="fr-content">「${esc(preview(f.content, 80))}」</div>
           <div class="fr-meta">${loc.join(' · ') || '无定位信息'}</div>
         </div>
@@ -374,7 +382,7 @@ function renderAnchorBox() {
         <span class="badge object">${esc(t ? t[1] : o.type)}</span>
         <span class="a-name">${esc(o.name)}</span>
         <span class="a-id mono">${esc(o.id)}</span>
-        <span class="badge st-${esc(o.state)}" style="margin-left:auto">${esc(o.state)}</span>
+        <span class="badge st-${esc(o.state)}" style="margin-left:auto">${esc(zh(STATE_CN, o.state))}</span>
       </label>`;
     })
     .join('');
@@ -482,7 +490,7 @@ function initSignalForm() {
       pushLog('Signal', sig.id, preview(sig.body, 60));
       $('sig-result').innerHTML = `<div class="ok-box">
         Signal 已创建：<span class="ok-id mono">${esc(sig.id)}</span>
-        · 状态 <span class="badge st-${esc(sig.state)}">${esc(sig.state)}</span>
+        · 状态 <span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>
         · 引用 <span class="num">${sig.fragments.length}</span> 个 Fragment
         · 锚定 <span class="num">${sig.anchors.length}</span> 个 Object
         <div style="margin-top:6px">

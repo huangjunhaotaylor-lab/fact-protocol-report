@@ -10,8 +10,38 @@
 
 import { signals, ApiError } from './api.js';
 
-const STATE_FILTERS = ['全部', 'Captured', 'Verified', 'Invalid', 'Archived'];
+/* chip 显示中文、data-state 保持英文（数据值不动） */
+const STATE_FILTERS = [
+  { v: '全部', zh: '全部' },
+  { v: 'Captured', zh: '待核' },
+  { v: 'Verified', zh: '已核' },
+  { v: 'Invalid', zh: '无效' },
+  { v: 'Archived', zh: '已归档' },
+];
 const HL = { bg: '#f2e0cc', border: '#a67c52' };
+
+/** 展示层中文映射：数据值 / data-* 一律保持英文，未命中原样显示 */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const SIGTYPE_CN = {
+  observation: '观察', event: '事件', change: '变更', status: '状态', action: '行动',
+};
+const FRAGTYPE_CN = {
+  Speech: '发言', Text: '文本', Table: '表格', Image: '图像',
+  Document: '文档', Data: '数据', Code: '代码', Other: '其他',
+};
+const SOURCE_CN = {
+  feishu: '飞书', meeting: '会议', prd: 'PRD', email: '邮件', erp: 'ERP',
+  jira: 'Jira', spreadsheet: '表格', agent: 'Agent 输出', ai: 'AI 输出',
+  manual: '人工录入', other: '其他',
+};
+const CTXKEY_CN = {
+  channel: '渠道', source: '来源', organization: '组织', location: '地点',
+  meeting: '会议', document: '文档', system: '系统',
+};
+const zh = (map, v) => map[v] || v;
 
 let sigList = [];
 let selectedId = null;
@@ -46,8 +76,8 @@ function showError(e) {
 function renderFilter() {
   const el = document.getElementById('state-filter');
   el.innerHTML = STATE_FILTERS.map(
-    (s) =>
-      `<span class="f-chip${s === stateFilter ? ' on' : ''}" data-state="${esc(s)}">${esc(s)}</span>`,
+    (f) =>
+      `<span class="f-chip${f.v === stateFilter ? ' on' : ''}" data-state="${esc(f.v)}">${esc(f.zh)}</span>`,
   ).join('');
   el.querySelectorAll('.f-chip').forEach((chip) => {
     chip.addEventListener('click', () => {
@@ -77,14 +107,14 @@ function renderList() {
       (s) => `<div class="ev-item${s.id === selectedId ? ' selected' : ''}" data-id="${esc(s.id)}">
       <div class="ev-head">
         <span class="ev-id mono">${esc(s.id)}</span>
-        <span class="badge signal">${esc(s.type)}</span>
+        <span class="badge signal">${esc(zh(SIGTYPE_CN, s.type))}</span>
       </div>
       <div class="ev-preview">${esc(s.body)}</div>
       <div class="sig-meta">
         <span>${fmtTime(s.captured_at)}</span>
         <span>
-          conf <span class="conf">${fmtConf(s.confidence)}</span>
-          <span class="badge st-${esc(s.state)}">${esc(s.state)}</span>
+          置信度 <span class="conf">${fmtConf(s.confidence)}</span>
+          <span class="badge st-${esc(s.state)}">${esc(zh(STATE_CN, s.state))}</span>
         </span>
       </div>
     </div>`,
@@ -158,18 +188,18 @@ function renderChain(trace) {
   const ctx = sig.context || {};
   const ctxText = ['channel', 'source', 'organization', 'location', 'meeting', 'document', 'system']
     .filter((k) => ctx[k])
-    .map((k) => `${k}: ${ctx[k]}`)
+    .map((k) => `${zh(CTXKEY_CN, k)}: ${ctx[k]}`)
     .join(' · ');
 
   const metaRows = [
-    ['类型', `<span class="badge signal">${esc(sig.type)}</span>`],
-    ['状态', `<span class="badge st-${esc(sig.state)}">${esc(sig.state)}</span>`],
-    ['confidence', `<span class="num">${fmtConf(sig.confidence)}</span>`],
+    ['类型', `<span class="badge signal">${esc(zh(SIGTYPE_CN, sig.type))}</span>`],
+    ['状态', `<span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>`],
+    ['置信度', `<span class="num">${fmtConf(sig.confidence)}</span>`],
     ['捕获时间', fmtTime(sig.captured_at)],
     ['发生时间', sig.occurred_at ? fmtTime(sig.occurred_at) : '—'],
     ['相关者', (sig.actors || []).join('、') || '—'],
-    ['锚定 Object', anchors || '—'],
-    ['Context', esc(ctxText) || '—'],
+    ['锚定对象', anchors || '—'],
+    ['上下文', esc(ctxText) || '—'],
   ]
     .map(([k, v]) => `<div><span class="mk">${k}：</span><span class="mv">${v}</span></div>`)
     .join('');
@@ -187,7 +217,7 @@ function renderChain(trace) {
         <div class="tier t-fragment">
           <div class="tier-label">
             <span>FRAGMENT · <span class="tier-id mono">${esc(fragment.id)}</span></span>
-            <span><span class="badge fragment">${esc(fragment.type)}</span> <span class="badge st-${esc(fragment.state)}">${esc(fragment.state)}</span></span>
+            <span><span class="badge fragment">${esc(zh(FRAGTYPE_CN, fragment.type))}</span> <span class="badge st-${esc(fragment.state)}">${esc(zh(STATE_CN, fragment.state))}</span></span>
           </div>
           <div class="tier-body">「${esc(fragment.content)}」</div>
           <div class="tier-label" style="margin-top:4px"><span>${esc(fragLocText(fragment, position))}</span><span class="mono">checksum ${esc(fragment.checksum).slice(0, 12)}…</span></div>
@@ -196,7 +226,7 @@ function renderChain(trace) {
         <div class="tier t-evidence">
           <div class="tier-label">
             <span>EVIDENCE · <span class="tier-id mono">${esc(evidence.id)}</span></span>
-            <span><span class="badge evidence">${esc(evidence.source)}</span> <span class="badge st-${esc(evidence.state)}">${esc(evidence.state)}</span></span>
+            <span><span class="badge evidence">${esc(zh(SOURCE_CN, evidence.source))}</span> <span class="badge st-${esc(evidence.state)}">${esc(zh(STATE_CN, evidence.state))}</span></span>
           </div>
           <div class="tier-label" style="margin-top:2px"><span>${fmtTime(evidence.created_at)}</span><span class="mono" data-tip="${esc(evidence.checksum)}">checksum ${esc(evidence.checksum).slice(0, 12)}…</span></div>
           ${renderEvidenceText(evidence, fragment, position)}
@@ -208,8 +238,8 @@ function renderChain(trace) {
   return `
     <div class="detail-head">
       <span class="d-id mono">${esc(sig.id)}</span>
-      <span class="badge signal">${esc(sig.type)}</span>
-      <span class="badge st-${esc(sig.state)}">${esc(sig.state)}</span>
+      <span class="badge signal">${esc(zh(SIGTYPE_CN, sig.type))}</span>
+      <span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>
     </div>
     <div class="meta-grid">${metaRows}</div>
 

@@ -21,6 +21,13 @@ const STATE_COLORS = {
   Created: 'var(--st-created)',
 };
 
+/** 展示层中文映射：数据值 / data-* 一律保持英文，未命中原样显示 */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const zhState = (s) => STATE_CN[s] || s;
+
 const ARROW_SVG = `<svg width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
   <line x1="0" y1="8" x2="18" y2="8" stroke="var(--muted)" stroke-width="1.5"/>
   <polygon points="18,3 26,8 18,13" fill="var(--muted)"/>
@@ -41,7 +48,7 @@ function microbar(dist) {
   const segs = Object.entries(dist)
     .map(([state, n]) => {
       const color = STATE_COLORS[state] || 'var(--c-relation)';
-      return `<div class="seg" style="width:${(n / total) * 100}%;background:${color}" data-tip="${state}: ${n}"></div>`;
+      return `<div class="seg" style="width:${(n / total) * 100}%;background:${color}" data-tip="${zhState(state)}: ${n}"></div>`;
     })
     .join('');
   return `<div class="microbar">${segs}</div>`;
@@ -65,14 +72,14 @@ function hbarGroup(title, dist, order, note) {
     .map((k) => {
       const color = STATE_COLORS[k] || 'var(--c-relation)';
       const pct = total ? (dist[k] / total) * 100 : 0;
-      return `<div class="seg" style="width:${pct}%;background:${color}" data-tip="${k}: ${dist[k]}（${pct.toFixed(0)}%）"></div>`;
+      return `<div class="seg" style="width:${pct}%;background:${color}" data-tip="${zhState(k)}: ${dist[k]}（${pct.toFixed(0)}%）"></div>`;
     })
     .join('');
   const legend = keys
     .filter((k) => dist[k])
     .map((k) => {
       const color = STATE_COLORS[k] || 'var(--c-relation)';
-      return `<span><span class="dot" style="background:${color}"></span>${k} <span class="num">${dist[k]}</span></span>`;
+      return `<span><span class="dot" style="background:${color}"></span>${zhState(k)} <span class="num">${dist[k]}</span></span>`;
     })
     .join('');
   return `<div class="hbar-group">

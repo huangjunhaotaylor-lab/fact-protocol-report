@@ -19,6 +19,21 @@ const STATE_COLORS = {
   Archived: '#c9c2b4',
 };
 
+/** 展示层中文映射：数据值 / value / data-* 一律保持英文，未命中原样显示 */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const OBJTYPE_CN = {
+  Project: '项目', System: '系统', Department: '部门', Customer: '客户',
+  Product: '产品', Document: '文档', Process: '流程', Person: '人员',
+  Organization: '组织', Task: '任务',
+};
+const SIGTYPE_CN = {
+  observation: '观察', event: '事件', change: '变更', status: '状态', action: '行动',
+};
+const zh = (map, v) => map[v] || v;
+
 let objList = [];
 let selectedId = null;
 let typeFilter = '全部';
@@ -67,12 +82,12 @@ function renderList() {
       (o) => `<div class="ev-item${o.id === selectedId ? ' selected' : ''}" data-id="${esc(o.id)}">
       <div class="ev-head">
         <span class="ev-id mono">${esc(o.id)}</span>
-        <span class="badge object">${esc(o.type)}</span>
+        <span class="badge object">${esc(zh(OBJTYPE_CN, o.type))}</span>
       </div>
       <div class="obj-name">${esc(o.name)}</div>
       <div class="ev-foot">
         <span>${fmtTime(o.updated_at)}</span>
-        <span class="badge st-${esc(o.state)}">${esc(o.state)}</span>
+        <span class="badge st-${esc(o.state)}">${esc(zh(STATE_CN, o.state))}</span>
       </div>
     </div>`,
     )
@@ -91,7 +106,7 @@ function renderDetail(o) {
   const metaRows = [
     ['创建时间', fmtTime(o.created_at)],
     ['更新时间', fmtTime(o.updated_at)],
-    ['Identity', o.identity ? `<span class="mono">${esc(o.identity)}</span>` : '—'],
+    ['身份标识', o.identity ? `<span class="mono">${esc(o.identity)}</span>` : '—'],
     ['别名', (o.aliases || []).length ? esc(o.aliases.join('、')) : '—'],
     [
       '属性',
@@ -117,12 +132,12 @@ function renderDetail(o) {
     <div class="detail-head">
       <span class="d-id">${esc(o.name)}</span>
       <span class="d-id mono" style="font-size:12px;color:var(--muted)">${esc(o.id)}</span>
-      <span class="badge object">${esc(o.type)}</span>
-      <span class="badge st-${esc(o.state)}" id="d-state">${esc(o.state)}</span>
+      <span class="badge object">${esc(zh(OBJTYPE_CN, o.type))}</span>
+      <span class="badge st-${esc(o.state)}" id="d-state">${esc(zh(STATE_CN, o.state))}</span>
       <div class="detail-actions">
-        <button class="btn small" id="btn-activate" ${canActivate ? '' : 'disabled'} data-tip="Created → Active">激活</button>
-        <button class="btn small" id="btn-merge" ${canMerge ? '' : 'disabled'} data-tip="Active → Merged&#10;合并来源保留在 attributes._merged_into">合并…</button>
-        <button class="btn small" id="btn-archive" ${canArchive ? '' : 'disabled'} data-tip="Active → Archived&#10;归档不等于删除">归档</button>
+        <button class="btn small" id="btn-activate" ${canActivate ? '' : 'disabled'} data-tip="已创建 → 活跃">激活</button>
+        <button class="btn small" id="btn-merge" ${canMerge ? '' : 'disabled'} data-tip="活跃 → 已合并&#10;合并来源保留在 attributes._merged_into">合并…</button>
+        <button class="btn small" id="btn-archive" ${canArchive ? '' : 'disabled'} data-tip="活跃 → 已归档&#10;归档不等于删除">归档</button>
       </div>
     </div>
     <div class="meta-grid">${metaRows}</div>`;
@@ -162,7 +177,7 @@ function renderTimeline(data) {
       // 上下交替排布，避免拥挤
       const up = i % 2 === 0;
       const cy = up ? AXIS_Y - 26 : AXIS_Y - 14;
-      const tip = `${s.id} · ${s.state}\n${fmtTime(sigTime(s))}\n${s.body}`;
+      const tip = `${s.id} · ${zh(STATE_CN, s.state)}\n${fmtTime(sigTime(s))}\n${s.body}`;
       return `<g class="tl-dot" data-id="${esc(s.id)}">
         <title>${esc(tip)}</title>
         <line x1="${x}" y1="${cy}" x2="${x}" y2="${AXIS_Y}" stroke="${color}" stroke-width="1" stroke-dasharray="2 2"/>
@@ -174,7 +189,7 @@ function renderTimeline(data) {
   const legend = Object.entries(STATE_COLORS)
     .map(
       ([st, c]) =>
-        `<span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:4px"></span>${st}</span>`,
+        `<span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:4px"></span>${zh(STATE_CN, st)}</span>`,
     )
     .join(' · ');
 
@@ -208,14 +223,14 @@ function renderSignals(sigs) {
     .slice()
     .sort((a, b) => String(b.captured_at).localeCompare(String(a.captured_at)));
   body.innerHTML = `<table class="tbl">
-    <thead><tr><th>ID</th><th>观察内容</th><th>类型</th><th>状态</th><th>conf</th><th>捕获时间</th></tr></thead>
+    <thead><tr><th>ID</th><th>观察内容</th><th>类型</th><th>状态</th><th>置信度</th><th>捕获时间</th></tr></thead>
     <tbody>${sorted
       .map(
         (s) => `<tr class="row-link" data-id="${esc(s.id)}" data-tip="点击前往追溯页查看证据链">
         <td class="mono">${esc(s.id)}</td>
         <td>${esc(s.body.length > 40 ? s.body.slice(0, 40) + '…' : s.body)}</td>
-        <td><span class="badge signal">${esc(s.type)}</span></td>
-        <td><span class="badge st-${esc(s.state)}">${esc(s.state)}</span></td>
+        <td><span class="badge signal">${esc(zh(SIGTYPE_CN, s.type))}</span></td>
+        <td><span class="badge st-${esc(s.state)}">${esc(zh(STATE_CN, s.state))}</span></td>
         <td class="num">${fmtConf(s.confidence)}</td>
         <td>${fmtTime(s.captured_at)}</td>
       </tr>`,
@@ -255,7 +270,7 @@ async function renderRelations(rels) {
         <span class="rel-type">${esc(r.type)}</span>
         <span class="rel-arrow">→</span>
         <span><span class="badge object">${esc(tgt)}</span></span>
-        <span class="rel-src">derived_from <a href="./trace.html?id=${encodeURIComponent(r.derived_from)}" data-tip="AC-013：追溯到来源 Signal">${esc(sigText)}</a> · conf <span class="num">${fmtConf(r.confidence)}</span></span>
+        <span class="rel-src">derived_from <a href="./trace.html?id=${encodeURIComponent(r.derived_from)}" data-tip="AC-013：追溯到来源 Signal">${esc(sigText)}</a> · 置信度 <span class="num">${fmtConf(r.confidence)}</span></span>
       </div>`;
     }),
   );
@@ -306,17 +321,17 @@ async function select(id) {
     document.getElementById('btn-archive').addEventListener('click', () =>
       doAction(
         () => objects.archive(id),
-        `确认归档 ${id}？\n归档为状态流转（Active → Archived），记录不会物理删除。`,
+        `确认归档 ${id}？\n归档为状态流转（活跃 → 已归档），记录不会物理删除。`,
       ),
     );
     document.getElementById('btn-merge').addEventListener('click', () => {
       const target = window.prompt(
-        `将 ${id} 合并到哪个 Object？\n请输入目标 Object ID（合并后本对象进入 Merged，名称并入目标别名）：`,
+        `将 ${id} 合并到哪个 Object？\n请输入目标 Object ID（合并后本对象进入「已合并」，名称并入目标别名）：`,
       );
       if (!target) return;
       doAction(
         () => objects.merge(id, target.trim()),
-        `确认将 ${id} 合并到 ${target.trim()}？\n合并不可逆：本对象状态变为 Merged，合并来源保留在 attributes._merged_into。`,
+        `确认将 ${id} 合并到 ${target.trim()}？\n合并不可逆：本对象状态变为「已合并」，合并来源保留在 attributes._merged_into。`,
       );
     });
 

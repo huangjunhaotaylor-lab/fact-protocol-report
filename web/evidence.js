@@ -21,6 +21,22 @@ const HL_PALETTE = [
   { bg: '#dfe5e0', border: '#6f7d72' },
 ];
 
+/** 展示层中文映射：数据值 / data-* 一律保持英文，未命中原样显示 */
+const STATE_CN = {
+  Captured: '待核', Verified: '已核', Invalid: '无效', Archived: '已归档',
+  Created: '已创建', Active: '活跃', Merged: '已合并',
+};
+const SOURCE_CN = {
+  feishu: '飞书', meeting: '会议', prd: 'PRD', email: '邮件', erp: 'ERP',
+  jira: 'Jira', spreadsheet: '表格', agent: 'Agent 输出', ai: 'AI 输出',
+  manual: '人工录入', other: '其他',
+};
+const FRAGTYPE_CN = {
+  Speech: '发言', Text: '文本', Table: '表格', Image: '图像',
+  Document: '文档', Data: '数据', Code: '代码', Other: '其他',
+};
+const zh = (map, v) => map[v] || v;
+
 let evList = [];
 let selectedId = null;
 
@@ -58,14 +74,14 @@ function renderList() {
       (ev) => `<div class="ev-item${ev.id === selectedId ? ' selected' : ''}" data-id="${esc(ev.id)}">
       <div class="ev-head">
         <span class="ev-id mono">${esc(ev.id)}</span>
-        <span class="badge evidence">${esc(ev.source)}</span>
+        <span class="badge evidence">${esc(zh(SOURCE_CN, ev.source))}</span>
       </div>
       <div class="ev-preview">${esc(ev.content)}</div>
       <div class="ev-foot">
         <span>${fmtTime(ev.created_at)}</span>
         <span>
           <span class="ck-dot" data-tip="checksum: ${esc(ev.checksum)}"></span>
-          <span class="badge st-${esc(ev.state)}">${esc(ev.state)}</span>
+          <span class="badge st-${esc(ev.state)}">${esc(zh(STATE_CN, ev.state))}</span>
         </span>
       </div>
     </div>`,
@@ -104,7 +120,7 @@ function locateFragments(evidence, frags) {
 }
 
 function fragTip({ f, start, end }) {
-  const parts = [`${f.id} · ${f.type}`, `offset ${start}–${end}`];
+  const parts = [`${f.id} · ${zh(FRAGTYPE_CN, f.type)}`, `offset ${start}–${end}`];
   if (f.speaker) parts.push(`说话人：${f.speaker}`);
   if (f.page !== undefined) parts.push(`页码：${f.page}`);
   if (f.timestamp_start) parts.push(`时间戳：${f.timestamp_start}${f.timestamp_end ? '–' + f.timestamp_end : ''}`);
@@ -144,7 +160,7 @@ async function select(id) {
     const unlocated = frags.filter((f) => !located.some((l) => l.f.id === f.id));
 
     const metaRows = [
-      ['来源', `<span class="badge evidence">${esc(ev.source)}</span>`],
+      ['来源', `<span class="badge evidence">${esc(zh(SOURCE_CN, ev.source))}</span>`],
       ['创建时间', fmtTime(ev.created_at)],
       ['checksum', `<span class="mono">${esc(ev.checksum)}</span>`],
       ['版本', ev.version ?? '—'],
@@ -160,11 +176,11 @@ async function select(id) {
         (l) => `<div class="frag-chip">
         <span class="chip-dot" style="background:${l.color.border}"></span>
         <span class="chip-id mono">${esc(l.f.id)}</span>
-        <span class="badge fragment">${esc(l.f.type)}</span>
+        <span class="badge fragment">${esc(zh(FRAGTYPE_CN, l.f.type))}</span>
         <span class="chip-meta">offset ${l.start}–${l.end}${l.f.speaker ? ' · ' + esc(l.f.speaker) : ''}${
           l.f.page !== undefined ? ' · p.' + l.f.page : ''
         }</span>
-        <span class="badge st-${esc(l.f.state)}">${esc(l.f.state)}</span>
+        <span class="badge st-${esc(l.f.state)}">${esc(zh(STATE_CN, l.f.state))}</span>
       </div>`,
       )
       .join('');
@@ -172,8 +188,8 @@ async function select(id) {
     body.innerHTML = `
       <div class="detail-head">
         <span class="d-id mono">${esc(ev.id)}</span>
-        <span class="badge evidence">${esc(ev.source)}</span>
-        <span class="badge st-${esc(ev.state)}" id="d-state">${esc(ev.state)}</span>
+        <span class="badge evidence">${esc(zh(SOURCE_CN, ev.source))}</span>
+        <span class="badge st-${esc(ev.state)}" id="d-state">${esc(zh(STATE_CN, ev.state))}</span>
         <span class="verify-result" id="verify-result"></span>
         <div class="detail-actions">
           <button class="btn small" id="btn-verify">校验 checksum</button>
@@ -225,14 +241,14 @@ async function verifyChecksum(id) {
 }
 
 async function archiveEvidence(id) {
-  if (!window.confirm(`确认归档 ${id}？\n归档为状态流转（Created → Archived），记录不会物理删除。`)) return;
+  if (!window.confirm(`确认归档 ${id}？\n归档为状态流转（已创建 → 已归档），记录不会物理删除。`)) return;
   try {
     const updated = await evidences.archive(id);
     const item = evList.find((e) => e.id === id);
     if (item) item.state = updated.state;
     renderList();
     const stateEl = document.getElementById('d-state');
-    stateEl.textContent = updated.state;
+    stateEl.textContent = zh(STATE_CN, updated.state);
     stateEl.className = `badge st-${updated.state}`;
     document.getElementById('btn-archive').disabled = true;
   } catch (e) {

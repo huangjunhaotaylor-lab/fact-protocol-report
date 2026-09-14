@@ -1,12 +1,12 @@
 /**
  * Signal 工作台 · Workbench
  *
- * - 状态四列看板：Captured 待核 / Verified 已核 / Invalid 无效 / Archived 归档
- *   · 卡片：类型徽标（五色低饱和）/ body 摘要 / confidence（等宽数字）/ captured_at / 锚定 Object 数与 Fragment 数
- *   · 列头计数；类型下拉过滤 + confidence 排序切换 + body 关键词搜索
+ * - 状态四列看板：待核 / 已核 / 无效 / 已归档
+ *   · 卡片：类型徽标（五色低饱和）/ body 摘要 / 置信度（等宽数字）/ captured_at / 锚定对象数与片段数
+ *   · 列头计数；类型下拉过滤 + 置信度排序切换 + body 关键词搜索
  * - 状态机即 UI（协议 6.3 / 第 11 节）：
- *   · Captured：「核认 Verified」「标记 Invalid」
- *   · Verified：「归档 Archived」
+ *   · Captured：「核认」「标记无效」
+ *   · Verified：「归档」
  *   · Invalid / Archived：无操作仅展示（协议禁止物理删除，AC-011）
  *   · 操作前 confirm，成功后本地更新状态并重排看板（无刷新）
  * - 卡片下钻：
@@ -24,8 +24,22 @@ const COLUMNS = [
   { state: 'Captured', label: '待核', tip: '新捕获的观察，等待人工或可信规则核认' },
   { state: 'Verified', label: '已核', tip: '已由人工或可信规则确认' },
   { state: 'Invalid', label: '无效', tip: '错误识别。协议禁止物理删除，仅状态留存' },
-  { state: 'Archived', label: '归档', tip: '历史失效。协议禁止物理删除，仅状态留存' },
+  { state: 'Archived', label: '已归档', tip: '历史失效。协议禁止物理删除，仅状态留存' },
 ];
+
+/** 展示层中文映射：数据值 / value / data-* 一律保持英文，未命中原样显示 */
+const SIGTYPE_CN = {
+  observation: '观察', event: '事件', change: '变更', status: '状态', action: '行动',
+};
+const FRAGTYPE_CN = {
+  Speech: '发言', Text: '文本', Table: '表格', Image: '图像',
+  Document: '文档', Data: '数据', Code: '代码', Other: '其他',
+};
+const CTXKEY_CN = {
+  channel: '渠道', source: '来源', organization: '组织', location: '地点',
+  meeting: '会议', document: '文档', system: '系统',
+};
+const zh = (map, v) => map[v] || v;
 
 const CTX_KEYS = ['channel', 'source', 'organization', 'location', 'meeting', 'document', 'system'];
 
@@ -84,13 +98,13 @@ function visibleList() {
 function renderContext(s) {
   const ctx = s.context || {};
   const parts = CTX_KEYS.filter((k) => ctx[k]).map(
-    (k) => `<span class="ck">${k}:</span> <span class="cv">${esc(ctx[k])}</span>`,
+    (k) => `<span class="ck">${zh(CTXKEY_CN, k)}:</span> <span class="cv">${esc(ctx[k])}</span>`,
   );
   if (s.occurred_at) {
-    parts.push(`<span class="ck">occurred_at:</span> <span class="cv num">${fmtTime(s.occurred_at)}</span>`);
+    parts.push(`<span class="ck">发生时间:</span> <span class="cv num">${fmtTime(s.occurred_at)}</span>`);
   }
   if ((s.actors || []).length) {
-    parts.push(`<span class="ck">actors:</span> <span class="cv">${esc(s.actors.join('、'))}</span>`);
+    parts.push(`<span class="ck">相关者:</span> <span class="cv">${esc(s.actors.join('、'))}</span>`);
   }
   if (!parts.length) return '';
   return `<div class="sc-ctx">${parts.join(' · ')}</div>`;
@@ -100,13 +114,13 @@ function renderContext(s) {
 function renderActions(s) {
   if (s.state === 'Captured') {
     return `<div class="sc-actions">
-      <button class="btn small btn-verify" data-act="verify" data-id="${esc(s.id)}" data-tip="Captured → Verified&#10;人工或可信规则确认">核认 Verified</button>
-      <button class="btn small btn-invalid" data-act="invalid" data-id="${esc(s.id)}" data-tip="Captured → Invalid&#10;错误识别标记，协议禁止物理删除">标记 Invalid</button>
+      <button class="btn small btn-verify" data-act="verify" data-id="${esc(s.id)}" data-tip="待核 → 已核&#10;人工或可信规则确认">核认</button>
+      <button class="btn small btn-invalid" data-act="invalid" data-id="${esc(s.id)}" data-tip="待核 → 无效&#10;错误识别标记，协议禁止物理删除">标记无效</button>
     </div>`;
   }
   if (s.state === 'Verified') {
     return `<div class="sc-actions">
-      <button class="btn small btn-archive" data-act="archive" data-id="${esc(s.id)}" data-tip="Verified → Archived&#10;历史失效归档，协议禁止物理删除">归档 Archived</button>
+      <button class="btn small btn-archive" data-act="archive" data-id="${esc(s.id)}" data-tip="已核 → 已归档&#10;历史失效归档，协议禁止物理删除">归档</button>
     </div>`;
   }
   // Invalid / Archived：无操作仅展示
@@ -128,16 +142,16 @@ function renderCard(s) {
   return `<div class="sig-card${s.id === deepId ? ' hl' : ''}" data-id="${esc(s.id)}">
     <div class="sc-head">
       <span class="sc-id mono">${esc(s.id)}</span>
-      <span class="badge ${typeCls}">${esc(s.type)}</span>
+      <span class="badge ${typeCls}">${esc(zh(SIGTYPE_CN, s.type))}</span>
     </div>
     <div class="sc-body">${esc(s.body)}</div>
     <div class="sc-meta">
-      <span>conf <span class="num">${fmtConf(s.confidence)}</span></span>
+      <span>置信度 <span class="num">${fmtConf(s.confidence)}</span></span>
       <span>${fmtTime(s.captured_at)}</span>
     </div>
     <div class="sc-anchors">
-      锚定 <span class="num">${(s.anchors || []).length}</span> Object ${anchors}
-      · <span class="num">${(s.fragments || []).length}</span> Fragment
+      锚定 <span class="num">${(s.anchors || []).length}</span> 个对象 ${anchors}
+      · <span class="num">${(s.fragments || []).length}</span> 条片段
     </div>
     ${renderContext(s)}
     ${renderActions(s)}
@@ -160,7 +174,7 @@ function renderBoard() {
     const cards = list.filter((s) => s.state === col.state);
     return `<div class="board-col col-${col.state}">
       <div class="col-head" data-tip="${esc(col.tip)}">
-        <span class="col-name">${col.state}<small>${col.label}</small></span>
+        <span class="col-name">${col.label}</span>
         <span class="col-count num">${cards.length}</span>
       </div>
       ${
@@ -190,9 +204,9 @@ function renderBoard() {
 /* ---------- 状态流转（confirm + 无刷新更新） ---------- */
 async function doTransition(id, act) {
   const confirms = {
-    verify: `确认核认 ${id}？\n状态流转 Captured → Verified（人工或可信规则确认）。记录完整保留，不涉及删除。`,
-    invalid: `确认标记 ${id} 为 Invalid？\nInvalid 表示错误识别。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 Captured → Invalid。`,
-    archive: `确认归档 ${id}？\nArchived 表示历史失效，不再作为当前有效现实。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 Verified → Archived。`,
+    verify: `确认核认 ${id}？\n状态流转 待核 → 已核（人工或可信规则确认）。记录完整保留，不涉及删除。`,
+    invalid: `确认标记 ${id} 为无效？\n「无效」表示错误识别。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 待核 → 无效。`,
+    archive: `确认归档 ${id}？\n「已归档」表示历史失效，不再作为当前有效现实。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 已核 → 已归档。`,
   };
   if (!window.confirm(confirms[act])) return;
 
@@ -232,7 +246,7 @@ function renderFragRows(frags) {
       (f) => `<div class="frag-row">
       <div class="fr-main">
         <span class="fr-id mono">${esc(f.id)}</span>
-        <span class="badge fragment">${esc(f.type)}</span>
+        <span class="badge fragment">${esc(zh(FRAGTYPE_CN, f.type))}</span>
         <div class="fr-content">「${esc(f.content)}」</div>
         <div class="fr-meta">${esc(fragLocText(f))} · Evidence <span class="mono">${esc(f.evidence_id)}</span></div>
       </div>
