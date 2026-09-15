@@ -25,6 +25,10 @@
         aria-label="图搜索">
     </div>
 
+    <select id="domainSel" class="bgo-domain-sel" aria-label="板块聚焦" title="板块聚焦：域外节点淡化显示">
+      <option value="">全部板块</option>
+    </select>
+
     <div class="seg" id="modeSeg" role="tablist" aria-label="模式切换">
       <button data-mode="explore" class="on" role="tab">探索</button>
       <button data-mode="judge" role="tab">研判</button>
@@ -75,6 +79,11 @@
         </div>
       </section>
 
+      <section class="bf-group" id="domainGroup" hidden>
+        <div class="bf-title">板块</div>
+        <div class="bf-chips" id="domainChips"></div>
+      </section>
+
       <section class="bf-group">
         <div class="bf-title">对象类型</div>
         <select id="objTypeSel" class="bf-select">
@@ -115,6 +124,7 @@
         <div class="lg-row"><span class="lg-edge solid"></span>支撑 / 锚定</div>
         <div class="lg-row"><span class="lg-edge dashed"></span>出处 / 同链</div>
         <div class="lg-row"><span class="lg-edge dotted"></span>合并</div>
+        <div id="legendDomains"></div>
       </div>
 
       <!-- 空态引导卡 -->

@@ -16,7 +16,7 @@
     12. 启动
    ============================================================ */
 
-import { GraphEngine } from './engine.js';
+import { GraphEngine, DOMAIN_COLORS } from './engine.js';
 
 /* ------------------------------------------------------------
    1. 工具与 API
@@ -88,10 +88,13 @@ const state = {
   filters: {
     kinds: { Evidence: true, Fragment: true, Signal: true, Object: true, Relation: true },
     sigStates: { Captured: true, Verified: true, Invalid: true, Archived: true },
+    domains: {},            // 板块 chips：name -> bool（数据驱动，全选 = 不过滤）
     objType: '',
     sizing: 'fixed',
     dimIsolated: false,
   },
+  domain: '',               // 顶栏板块聚焦（'' = 全部板块，淡化模式）
+  domains: [],              // /api/domains 返回的板块字典
   timeWindow: null,           // [t0, t1] | null
   histo: null,                // { min, max, buckets: [{start,end,count}] }
   currentScene: null,         // 当前加载/保存的场景名
@@ -119,6 +122,9 @@ const engine = new GraphEngine($('graph'), {
   onHover: (nd, x, y) => { renderTip(nd, x, y); },
 });
 
+// 调试句柄：控制台/自动化可读取引擎与应用状态
+window.__bgo = { engine, state };
+
 /* ------------------------------------------------------------
    4. 数据同步（master 全集 ⇄ 引擎）
    ------------------------------------------------------------ */
@@ -128,8 +134,18 @@ function nodeAllowed(n) {
   if (state.hidden.has(n.id) || state.collapsed.has(n.id)) return false;
   if (!state.filters.kinds[n.kind]) return false;
   if (n.kind === 'Signal' && n.state && !state.filters.sigStates[n.state]) return false;
+  if (n.kind === 'Signal' && !domainChipsAllow(n)) return false;
   if (n.kind === 'Object' && state.filters.objType && n.type !== state.filters.objType) return false;
   return true;
+}
+
+/** 板块 chips（AND 语义：全选 = 不过滤；否则 Signal 须命中任一已选板块） */
+function domainChipsAllow(n) {
+  const df = state.filters.domains;
+  const names = Object.keys(df);
+  if (!names.length || names.every((k) => df[k])) return true;
+  const mine = Array.isArray(n.domains) ? n.domains : [];
+  return mine.some((d) => df[d]);
 }
 
 /**
@@ -517,6 +533,14 @@ function renderInspector(nd) {
   if (nd.kind === 'Object' && Array.isArray(d.aliases) && d.aliases.length) {
     table.append(propRow('别名', d.aliases.join('、')));
   }
+  // 板块归属：domains 全列 + 主线板块（无则省略）
+  if (nd.kind === 'Signal' || nd.kind === 'Object') {
+    const doms = (Array.isArray(nd.domains) && nd.domains.length) ? nd.domains
+      : (Array.isArray(d.domains) ? d.domains : []);
+    if (doms.length) table.append(propRow('板块', doms.join('、')));
+    const pd = nd.primary_domain || d.primary_domain;
+    if (pd) table.append(propRow('主线板块', pd));
+  }
   if (d.attributes && typeof d.attributes === 'object' && Object.keys(d.attributes).length) {
     table.append(propRow('附加属性', JSON.stringify(d.attributes)));
   }
@@ -841,6 +865,73 @@ function updateFilterCounts() {
   for (const s of document.querySelectorAll('.bf-count')) {
     s.textContent = String(counts[s.dataset.count] || 0);
   }
+  renderLegendDomains();
+}
+
+/* ----- 板块（domain）控件 ----- */
+
+/** 有信号的板块（顶栏切换器与过滤器 chips 都只列这些） */
+function activeDomains() {
+  return state.domains.filter((d) => d.signal_count > 0);
+}
+
+/** 渲染顶栏板块切换器 + 研判过滤器板块 chips（/api/domains 加载后调用一次） */
+function renderDomainControls() {
+  const list = activeDomains();
+
+  // 顶栏切换器：全部板块 + 有信号的板块
+  const sel = $('domainSel');
+  sel.textContent = '';
+  const all = el('option', null, '全部板块');
+  all.value = '';
+  sel.append(all);
+  for (const d of list) {
+    const opt = el('option', null, `${d.name}（${d.signal_count}）`);
+    opt.value = d.name;
+    sel.append(opt);
+  }
+  sel.value = list.some((d) => d.name === state.domain) ? state.domain : '';
+  state.domain = sel.value;
+  engine.setDomain(state.domain || null);
+
+  // 研判过滤器 chips（多选，全选 = 不过滤）
+  const box = $('domainChips');
+  box.textContent = '';
+  $('domainGroup').hidden = list.length === 0;
+  for (const d of list) {
+    if (!(d.name in state.filters.domains)) state.filters.domains[d.name] = true;
+    const chip = el('button', 'chip' + (state.filters.domains[d.name] !== false ? ' on' : ''), d.name);
+    chip.dataset.domain = d.name;
+    chip.title = `信号 ${d.signal_count}`;
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('on');
+      state.filters.domains[d.name] = chip.classList.contains('on');
+      applyFilters();
+      updateEmptyState();
+    });
+    box.append(chip);
+  }
+}
+
+/** 图例板块分组：仅显示当前图数据中出现的板块（小色环 + 名称） */
+function renderLegendDomains() {
+  const box = $('legendDomains');
+  if (!box) return;
+  box.textContent = '';
+  const present = new Set();
+  for (const n of state.master.nodes.values()) {
+    for (const d of n.domains || []) present.add(d);
+  }
+  const names = [...present].filter((d) => DOMAIN_COLORS[d]).sort();
+  if (!names.length) return;
+  box.append(el('div', 'lg-sect', '板块'));
+  for (const name of names) {
+    const row = el('div', 'lg-row');
+    const ring = el('span', 'lg-ring');
+    ring.style.borderColor = DOMAIN_COLORS[name];
+    row.append(ring, document.createTextNode(name));
+    box.append(row);
+  }
 }
 
 /* ----- 时间直方图 ----- */
@@ -959,6 +1050,7 @@ function snapshotScene(name) {
     camera: { x: engine.cam.x, y: engine.cam.y, z: engine.cam.z },
     filters: JSON.parse(JSON.stringify(state.filters)),
     hidden: [...state.hidden],
+    domain: state.domain || '',
     timeWindow: state.timeWindow,
     savedAt: new Date().toISOString(),
   };
@@ -988,6 +1080,13 @@ async function loadSceneData(sc) {
     }
   }
   applyFilters();
+
+  // 板块聚焦（顶栏切换器）：选项不存在时回落「全部板块」
+  state.domain = sc.domain || '';
+  const selEl = $('domainSel');
+  if (![...selEl.options].some((o) => o.value === state.domain)) state.domain = '';
+  selEl.value = state.domain;
+  engine.setDomain(state.domain || null);
 
   if (sc.camera) {
     engine.cam.x = Number(sc.camera.x) || 0;
@@ -1022,6 +1121,9 @@ function syncFilterUI() {
   }
   for (const chip of $('sigStateChips').querySelectorAll('.chip')) {
     chip.classList.toggle('on', !!state.filters.sigStates[chip.dataset.state]);
+  }
+  for (const chip of $('domainChips').querySelectorAll('.chip')) {
+    chip.classList.toggle('on', state.filters.domains[chip.dataset.domain] !== false);
   }
   $('objTypeSel').value = state.filters.objType || '';
   for (const b of $('sizingSeg').querySelectorAll('button')) {
@@ -1186,6 +1288,12 @@ function bindEvents() {
     b.addEventListener('click', () => setMode(b.dataset.mode));
   }
 
+  // 板块聚焦（顶栏切换器：淡化模式，不移除节点、不动相机）
+  $('domainSel').addEventListener('change', (e) => {
+    state.domain = e.target.value;
+    engine.setDomain(state.domain || null);
+  });
+
   // 场景
   $('sceneBtn').addEventListener('click', (e) => { e.stopPropagation(); openSceneMenu(); });
   document.addEventListener('click', (e) => {
@@ -1309,6 +1417,13 @@ async function init() {
       opt.value = t;
       sel.append(opt);
     }
+
+    // 板块字典：顶栏切换器 + 研判过滤器 chips（接口失败不阻断主流程）
+    try {
+      const dd = await api('/api/domains');
+      state.domains = dd.domains || [];
+      renderDomainControls();
+    } catch (_) { /* 无板块数据时保持「全部板块」 */ }
 
     if (total > 0 && total <= 1500) {
       const g = await api('/api/graph');

@@ -29,6 +29,17 @@ export const KIND_COLORS = {
   Relation: '#718096', // 中灰
 };
 
+/** 板块（domain）配色：低饱和、互不混淆、与节点类型色区分 */
+export const DOMAIN_COLORS = {
+  仓储运营:   '#b7791f', // 暗琥珀
+  销售与交付: '#2f855a', // 灰绿
+  项目推进:   '#5a67a8', // 靛蓝灰
+  采购供应:   '#97516b', // 暗玫瑰
+  财务:       '#6b5b8e', // 灰紫
+  人力:       '#4a7ba6', // 钢蓝
+  系统与工具: '#718096', // 中灰
+};
+
 const C = {
   bg:          '#f5f5f7',
   grid:        '#e4e4e8',
@@ -66,8 +77,8 @@ const LAYOUT = {
 
 const CAM = { minZoom: 0.15, maxZoom: 4, animMs: 300, wheelRate: 0.0016 };
 const MINIMAP = { w: 160, h: 100, margin: 12, pad: 16 };
-const TIME_FADE_MS = 200;         // 时间窗显隐过渡时长
-const OUT_OF_WINDOW_ALPHA = 0.08; // 窗外节点边透明度
+const TIME_FADE_MS = 200;         // 时间窗/板块显隐过渡时长
+const OUT_OF_WINDOW_ALPHA = 0.08; // 窗外/域外节点边透明度
 const DIM_ALPHA = 0.12;           // dim 状态透明度
 const ARCHIVED_ALPHA = 0.35;      // Archived 状态透明度
 const LABEL_MIN_ZOOM = 0.7;       // 标签显示缩放阈值
@@ -277,6 +288,7 @@ export class GraphEngine {
     this.hlNodes = new Set();   // 高亮路径节点 id
     this.hlEdges = new Set();   // 高亮路径边 id
     this.timeWindow = null;     // [t0, t1] | null
+    this.domain = null;         // 板块聚焦名 | null
     this.hoverNode = null;
     this._hoverNeighborSet = null; // Set<id>（含自身）
     this._hoverEdgeSet = null;     // Set<edge>
@@ -361,6 +373,8 @@ export class GraphEngine {
         _time: GraphMath.parseTime(raw.captured_at ?? raw.occurred_at ?? raw.created_at),
         _tAlpha: 1,       // 时间窗当前透明度
         _tAlphaTarget: 1, // 时间窗目标透明度
+        _dAlpha: 1,       // 板块当前透明度
+        _dAlphaTarget: 1, // 板块目标透明度
       });
       this.nodes.push(nd);
       this.nodeById.set(nd.id, nd);
@@ -379,6 +393,7 @@ export class GraphEngine {
     }
     for (const nd of this.nodes) nd.r = this._radius(nd);
     if (this.timeWindow) this._applyTimeWindow();
+    if (this.domain) this._applyDomain();
     this._wake(1);
   }
 
@@ -398,6 +413,7 @@ export class GraphEngine {
       this.edges.some((e) => e.id === eid)));
     if (this.hoverNode && kill.has(this.hoverNode.id)) this._setHover(null);
     if (this.timeWindow) this._applyTimeWindow();
+    if (this.domain) this._applyDomain();
     this._wake(0.6);
   }
 
@@ -537,7 +553,7 @@ export class GraphEngine {
 
     if (this._camAnim) this._stepCamAnim(t);
     if (this.alpha > 0) this._layoutStep(); // 休眠时跳过力计算
-    this._stepTimeAlpha(dt);
+    this._stepDimAlpha(dt);                 // 时间窗/板块透明度插值
     this._render(this.ctx, {});             // 每帧重绘
 
     this._raf = requestAnimationFrame((tt) => this._frame(tt));
@@ -597,8 +613,9 @@ export class GraphEngine {
     }
   }
 
+  /** 边透明度 = 两端点时间窗与板块透明度的最严者，再叠加 dim 通道 */
   _edgeAlpha(e) {
-    let a = Math.min(e.s._tAlpha, e.t._tAlpha);
+    let a = Math.min(e.s._tAlpha, e.t._tAlpha, e.s._dAlpha, e.t._dAlpha);
     if (this.dimSet && !(this.dimSet.has(e.s.id) && this.dimSet.has(e.t.id))) {
       a *= DIM_ALPHA;
     }
@@ -630,7 +647,7 @@ export class GraphEngine {
     for (const e of this.edges) {
       const isHl = this.hlEdges.has(e.id) || (hoverActive && this._hoverEdgeSet.has(e));
       if (!isHl) continue;
-      const a = Math.min(e.s._tAlpha, e.t._tAlpha);
+      const a = Math.min(e.s._tAlpha, e.t._tAlpha, e.s._dAlpha, e.t._dAlpha);
       if (a <= 0.004) continue;
       ctx.globalAlpha = Math.min(1, a);
       ctx.strokeStyle = C.accent;
@@ -646,8 +663,9 @@ export class GraphEngine {
     ctx.globalAlpha = 1;
   }
 
+  /** 节点透明度 = 时间窗 ∩ 板块（取最严者），再叠 dim / Archived / hover 通道 */
   _nodeAlpha(nd) {
-    let a = nd._tAlpha;
+    let a = Math.min(nd._tAlpha, nd._dAlpha);
     if (this.dimSet && !this.dimSet.has(nd.id)) a *= DIM_ALPHA;
     if (nd.state === 'Archived') a *= ARCHIVED_ALPHA;
     if (this.hoverNode && this._hoverNeighborSet && !this._hoverNeighborSet.has(nd.id)) a *= 0.55;
@@ -688,6 +706,10 @@ export class GraphEngine {
       const selected = this.selection.has(nd.id);
       const invalid = nd.state === 'Invalid';
       const fill = invalid ? C.desat : (KIND_COLORS[nd.kind] || '#718096');
+      // Signal 板块外环（primary_domain 着色）；无主线板块不画
+      const domColor = nd.kind === 'Signal' && !invalid && nd.primary_domain
+        ? (DOMAIN_COLORS[nd.primary_domain] || null)
+        : null;
 
       ctx.globalAlpha = Math.min(1, a);
 
@@ -727,13 +749,23 @@ export class GraphEngine {
         }
       }
 
-      // Signal 状态色环：Captured 暖黄 / Verified 灰绿
+      // Signal 状态色环：Captured 暖黄 / Verified 灰绿（内环，r+2，宽 2.5）
       if (nd.kind === 'Signal' && !invalid &&
           (nd.state === 'Captured' || nd.state === 'Verified')) {
         ctx.strokeStyle = nd.state === 'Captured' ? C.stCaptured : C.stVerified;
         ctx.lineWidth = 2.5 / z;
         ctx.beginPath();
         ctx.arc(x, y, r + 2 / z, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Signal 板块外环：与内环间隔 1.5px，环宽 2px
+      // （内环外沿 r+3.25 → 间隙 1.5 → 外环内沿 r+4.75，中心 r+5.75）
+      if (domColor) {
+        ctx.strokeStyle = domColor;
+        ctx.lineWidth = 2 / z;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 5.75 / z, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -747,18 +779,18 @@ export class GraphEngine {
         ctx.stroke();
       }
 
-      // 选中环：#4a5568 2px 外环
+      // 选中环：#4a5568 2px 外环（有板块外环时再外移，避免叠环）
       if (selected) {
         ctx.strokeStyle = C.accent;
         ctx.lineWidth = 2 / z;
         ctx.beginPath();
-        ctx.arc(x, y, r + 4 / z, 0, Math.PI * 2);
+        ctx.arc(x, y, r + (domColor ? 9 : 4) / z, 0, Math.PI * 2);
         ctx.stroke();
       } else if (nd === this.hoverNode) {
         ctx.strokeStyle = C.accent;
         ctx.lineWidth = 1.5 / z;
         ctx.beginPath();
-        ctx.arc(x, y, r + 3 / z, 0, Math.PI * 2);
+        ctx.arc(x, y, r + (domColor ? 8.5 : 3) / z, 0, Math.PI * 2);
         ctx.stroke();
       }
     }
@@ -1076,9 +1108,9 @@ export class GraphEngine {
     this._roundRectPath(ctx, mx, my, mw, mh, 8);
     ctx.clip();
 
-    // 全图缩略（按类型着色的小点，透明度跟随时间窗）
+    // 全图缩略（按类型着色的小点，透明度跟随时间窗与板块聚焦）
     for (const nd of this.nodes) {
-      ctx.globalAlpha = 0.75 * Math.min(1, nd._tAlpha + 0.15);
+      ctx.globalAlpha = 0.75 * Math.min(1, Math.min(nd._tAlpha, nd._dAlpha) + 0.15);
       ctx.fillStyle = KIND_COLORS[nd.kind] || '#718096';
       ctx.fillRect(toX(nd.x) - 1.1, toY(nd.y) - 1.1, 2.2, 2.2);
     }
@@ -1095,7 +1127,7 @@ export class GraphEngine {
   }
 
   /* ------------------------------------------------------------
-     10. 时间窗与显隐过渡
+     10. 时间窗 / 板块聚焦与显隐过渡
      ------------------------------------------------------------ */
 
   /**
@@ -1135,14 +1167,70 @@ export class GraphEngine {
     }
   }
 
-  /** 200ms 线性逼近目标透明度 */
-  _stepTimeAlpha(dt) {
+  /**
+   * 板块聚焦：域外节点边降至 8% 透明度（200ms 平滑过渡），相机不动。
+   * 归属判定：
+   *  - Signal/Object：自身 domains 含该板块；
+   *  - Fragment/Evidence（无板块字段）：沿 edges 一至二跳内任一 Signal 属该板块则保留；
+   *  - Relation：两端（全部相邻节点）都显形才显形，无相邻边时保留。
+   * 与时间窗为独立通道，最终透明度在 _nodeAlpha/_edgeAlpha 取最严者合成。
+   * @param {string | null} domain 板块名；null/空串取消聚焦
+   */
+  setDomain(domain) {
+    this.domain = domain || null;
+    this._applyDomain();
+  }
+
+  _applyDomain() {
+    const d = this.domain;
+    if (!d) {
+      for (const nd of this.nodes) nd._dAlphaTarget = 1;
+      return;
+    }
+    // 第一遍：Signal/Object 按自身 domains 判定
+    for (const nd of this.nodes) {
+      if (nd.kind === 'Signal' || nd.kind === 'Object') {
+        nd._dAlphaTarget = (Array.isArray(nd.domains) && nd.domains.includes(d))
+          ? 1 : OUT_OF_WINDOW_ALPHA;
+      } else if (nd.kind !== 'Relation') {
+        nd._dAlphaTarget = -1; // Fragment/Evidence：待跟随关联 Signal
+      }
+    }
+    // 第二遍：Fragment/Evidence —— 一至二跳内任一域内 Signal 则保留
+    const hitSignal = (n) => n.kind === 'Signal' && n._dAlphaTarget === 1;
+    for (const nd of this.nodes) {
+      if (nd._dAlphaTarget !== -1) continue;
+      const hop1 = (this.adj.get(nd.id) || []).map((a) => a.node);
+      let keep = hop1.some(hitSignal);
+      if (!keep) {
+        for (const n1 of hop1) {
+          if (n1 === nd) continue;
+          const hop2 = (this.adj.get(n1.id) || []).map((a) => a.node);
+          if (hop2.some(hitSignal)) { keep = true; break; }
+        }
+      }
+      nd._dAlphaTarget = keep ? 1 : OUT_OF_WINDOW_ALPHA;
+    }
+    // 第三遍：Relation —— 全部相邻节点显形才显形；孤立 Relation 保留
+    for (const nd of this.nodes) {
+      if (nd.kind !== 'Relation') continue;
+      const nb = (this.adj.get(nd.id) || []).map((a) => a.node);
+      nd._dAlphaTarget = (!nb.length || nb.every((n) => n._dAlphaTarget === 1))
+        ? 1 : OUT_OF_WINDOW_ALPHA;
+    }
+  }
+
+  /** 200ms 线性逼近目标透明度（时间窗 + 板块双通道） */
+  _stepDimAlpha(dt) {
     if (dt <= 0) return;
     const step = dt / TIME_FADE_MS;
     for (const nd of this.nodes) {
-      const diff = nd._tAlphaTarget - nd._tAlpha;
+      let diff = nd._tAlphaTarget - nd._tAlpha;
       if (Math.abs(diff) <= step) nd._tAlpha = nd._tAlphaTarget;
       else nd._tAlpha += Math.sign(diff) * step;
+      diff = nd._dAlphaTarget - nd._dAlpha;
+      if (Math.abs(diff) <= step) nd._dAlpha = nd._dAlphaTarget;
+      else nd._dAlpha += Math.sign(diff) * step;
     }
   }
 
