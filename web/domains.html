@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSP Reality Layer — 板块管理</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* ===== 板块管理页自有样式（不动 styles.css） ===== */
+
+    /* 工具条 */
+    .dm-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .dm-toolbar .dm-note { font-size: 12px; color: var(--muted); }
+    .dm-toolbar .btn { margin-left: auto; }
+
+    /* 重新分类结果 */
+    #reclassify-result { margin-top: 10px; font-size: 12.5px; }
+    #reclassify-result .rc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #reclassify-result .rc-dist { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    #reclassify-result .rc-item { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* 板块卡片 */
+    #domain-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .dcard {
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .dc-head { display: flex; align-items: center; gap: 8px; }
+    .dc-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .dc-name { font-size: 14px; font-weight: 600; }
+    .dc-counts { font-size: 12px; color: var(--muted); }
+    .dc-save { margin-left: auto; }
+    .dc-state { font-size: 11px; color: var(--muted); margin-left: 6px; }
+    .dc-state.dirty { color: #8a5a12; }
+    .dc-state.saved { color: #276749; }
+
+    /* 关键词 chips */
+    .dc-kws { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+    .kw-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; padding: 1px 6px 1px 9px;
+      border: 1px solid var(--line-strong); border-radius: 10px;
+      background: var(--bg); color: var(--ink);
+    }
+    .kw-x {
+      border: none; background: none; padding: 0 2px; cursor: pointer;
+      color: var(--muted); font-size: 13px; line-height: 1; font-family: inherit;
+    }
+    .kw-x:hover { color: #9b2c2c; }
+    .kw-input {
+      border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--card-bg);
+      padding: 2px 9px; font-size: 12px; font-family: inherit; color: var(--ink);
+      width: 120px;
+    }
+    .kw-input:focus { outline: none; border-color: var(--accent); border-style: solid; }
+
+    /* 未分类信号队列 */
+    .uq-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px;
+    }
+    .uq-row:last-child { border-bottom: none; }
+    .uq-id { font-weight: 600; }
+    .uq-body { flex: 1 1 260px; min-width: 200px; overflow-wrap: anywhere; }
+    .uq-doms { color: var(--muted); font-size: 11.5px; }
+    .uq-row select[multiple] {
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 12px; color: var(--ink);
+      background: var(--card-bg); padding: 3px; min-width: 130px;
+    }
+    .uq-row select[multiple]:focus { outline: none; border-color: var(--accent); }
+    .uq-empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
+    <a class="nav-link nav-graph" href="/static/graph/graph.html">◆ Graph OS</a>
+    <a class="nav-link" href="./index.html">总览</a>
+    <a class="nav-link" href="./intake.html">录入台</a>
+    <a class="nav-link" href="./evidence.html">证据库</a>
+    <a class="nav-link" href="./signals.html">Signal 工作台</a>
+    <a class="nav-link" href="./trace.html">追溯</a>
+    <a class="nav-link" href="./objects.html">对象全景</a>
+    <a class="nav-link active" href="./domains.html">板块管理</a>
+  </nav>
+
+  <main class="page">
+    <header class="page-head">
+      <div class="page-title">板块管理 · Domains</div>
+      <div class="page-sub">板块关键词字典维护 · 存量重新分类 · 未分类信号归口 —— 分类器只认关键词命中，人工纠正永久优先</div>
+    </header>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <!-- 工具条：重新分类 -->
+    <section class="card">
+      <h3>存量分类</h3>
+      <div class="dm-toolbar">
+        <span class="dm-note">重跑分类器回填全部信号的板块字段；人工纠正过（domain_manual）的信号跳过。操作幂等。</span>
+        <button class="btn" id="btn-reclassify" data-tip="对全部未人工纠正的信号重跑板块分类器，并重算 Object 传导">重新分类</button>
+      </div>
+      <div id="reclassify-result" hidden></div>
+    </section>
+
+    <!-- 板块字典卡片 -->
+    <section>
+      <h3 style="margin:0 0 10px">板块字典 <span class="notice" style="text-transform:none;letter-spacing:0">（chips × 删除 · 输入框回车添加 · 保存后分类器立即生效）</span></h3>
+      <div id="domain-cards"><p class="notice">加载中…</p></div>
+    </section>
+
+    <!-- 未分类信号队列 -->
+    <section class="card" id="unclassified-card" style="margin-top:14px">
+      <h3>未分类信号队列 <span id="unclassified-count" class="num"></span></h3>
+      <div id="unclassified-list"><p class="notice">加载中…</p></div>
+    </section>
+  </main>
+
+  <script type="module" src="./domains.js"></script>
+</body>
+</html>

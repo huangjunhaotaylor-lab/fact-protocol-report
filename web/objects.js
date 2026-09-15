@@ -11,6 +11,7 @@
  */
 
 import { objects, relations, ApiError } from './api.js';
+import { domainBadges } from './domain-badges.js';
 
 const STATE_COLORS = {
   Captured: '#b7791f',
@@ -37,6 +38,7 @@ const zh = (map, v) => map[v] || v;
 let objList = [];
 let selectedId = null;
 let typeFilter = '全部';
+let domainFilter = '全部';
 
 function esc(s) {
   return String(s ?? '')
@@ -69,8 +71,27 @@ function objName(id) {
 }
 
 /* ---------- 列表 ---------- */
+function renderDomainFilter() {
+  // 板块选项取自对象自身 domains 的并集（有对象的板块才列出）
+  const names = [...new Set(objList.flatMap((o) => o.domains || []))].sort((a, b) =>
+    a.localeCompare(b, 'zh-Hans-CN'),
+  );
+  const sel = document.getElementById('domain-filter');
+  sel.innerHTML =
+    '<option value="全部">全部</option>' +
+    names.map((n) => `<option value="${esc(n)}"${n === domainFilter ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  if (domainFilter !== '全部' && !names.includes(domainFilter)) {
+    domainFilter = '全部';
+    sel.value = '全部';
+  }
+}
+
 function renderList() {
-  const list = typeFilter === '全部' ? objList : objList.filter((o) => o.type === typeFilter);
+  const list = objList.filter(
+    (o) =>
+      (typeFilter === '全部' || o.type === typeFilter) &&
+      (domainFilter === '全部' || (o.domains || []).includes(domainFilter)),
+  );
   document.getElementById('obj-count').textContent = `共 ${list.length} 个`;
   const listEl = document.getElementById('obj-list');
   if (!list.length) {
@@ -85,6 +106,7 @@ function renderList() {
         <span class="badge object">${esc(zh(OBJTYPE_CN, o.type))}</span>
       </div>
       <div class="obj-name">${esc(o.name)}</div>
+      ${(o.domains || []).length ? `<div class="obj-domains">${domainBadges(o.domains, o.primary_domain)}</div>` : ''}
       <div class="ev-foot">
         <span>${fmtTime(o.updated_at)}</span>
         <span class="badge st-${esc(o.state)}">${esc(zh(STATE_CN, o.state))}</span>
@@ -223,13 +245,14 @@ function renderSignals(sigs) {
     .slice()
     .sort((a, b) => String(b.captured_at).localeCompare(String(a.captured_at)));
   body.innerHTML = `<table class="tbl">
-    <thead><tr><th>ID</th><th>观察内容</th><th>类型</th><th>状态</th><th>置信度</th><th>捕获时间</th></tr></thead>
+    <thead><tr><th>ID</th><th>观察内容</th><th>类型</th><th>板块</th><th>状态</th><th>置信度</th><th>捕获时间</th></tr></thead>
     <tbody>${sorted
       .map(
         (s) => `<tr class="row-link" data-id="${esc(s.id)}" data-tip="点击前往追溯页查看证据链">
         <td class="mono">${esc(s.id)}</td>
         <td>${esc(s.body.length > 40 ? s.body.slice(0, 40) + '…' : s.body)}</td>
         <td><span class="badge signal">${esc(zh(SIGTYPE_CN, s.type))}</span></td>
+        <td>${domainBadges(s.domains, s.primary_domain) || '<span class="notice">—</span>'}</td>
         <td><span class="badge st-${esc(s.state)}">${esc(zh(STATE_CN, s.state))}</span></td>
         <td class="num">${fmtConf(s.confidence)}</td>
         <td>${fmtTime(s.captured_at)}</td>
@@ -284,6 +307,7 @@ async function doAction(fn, confirmText) {
     await fn();
     await select(selectedId);
     objList = await objects.list();
+    renderDomainFilter();
     renderList();
   } catch (e) {
     showError(e);
@@ -355,10 +379,15 @@ async function main() {
     typeFilter = e.target.value;
     renderList();
   });
+  document.getElementById('domain-filter').addEventListener('change', (e) => {
+    domainFilter = e.target.value;
+    renderList();
+  });
 
   try {
     objList = await objects.list();
     objList.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+    renderDomainFilter();
     renderList();
 
     const params = new URLSearchParams(window.location.search);

@@ -19,6 +19,7 @@
  */
 
 import { signals, ApiError } from './api.js';
+import { domainBadges } from './domain-badges.js';
 
 const COLUMNS = [
   { state: 'Captured', label: '待核', tip: '新捕获的观察，等待人工或可信规则核认' },
@@ -45,6 +46,7 @@ const CTX_KEYS = ['channel', 'source', 'organization', 'location', 'meeting', 'd
 
 let sigList = [];
 let typeFilter = '全部';
+let domainFilter = '全部';
 let sortMode = 'time';
 let keyword = '';
 let deepId = null;
@@ -81,6 +83,7 @@ function visibleList() {
   let list = sigList.filter(
     (s) =>
       (typeFilter === '全部' || s.type === typeFilter) &&
+      (domainFilter === '全部' || (s.domains || []).includes(domainFilter)) &&
       (!kw || String(s.body || '').toLowerCase().includes(kw)),
   );
   list = list.slice();
@@ -144,6 +147,7 @@ function renderCard(s) {
       <span class="sc-id mono">${esc(s.id)}</span>
       <span class="badge ${typeCls}">${esc(zh(SIGTYPE_CN, s.type))}</span>
     </div>
+    ${(s.domains || []).length ? `<div class="sc-domains">${domainBadges(s.domains, s.primary_domain)}</div>` : ''}
     <div class="sc-body">${esc(s.body)}</div>
     <div class="sc-meta">
       <span>置信度 <span class="num">${fmtConf(s.confidence)}</span></span>
@@ -285,6 +289,10 @@ function bindToolbar() {
     typeFilter = e.target.value;
     renderBoard();
   });
+  document.getElementById('domain-filter').addEventListener('change', (e) => {
+    domainFilter = e.target.value;
+    renderBoard();
+  });
   document.getElementById('sort-mode').addEventListener('change', (e) => {
     sortMode = e.target.value;
     renderBoard();
@@ -295,10 +303,27 @@ function bindToolbar() {
   });
 }
 
+/* ---------- 板块筛选下拉（有信号的板块才列出；失败不阻塞主流程） ---------- */
+async function loadDomainFilter() {
+  try {
+    const res = await fetch('/api/domains');
+    if (!res.ok) return;
+    const data = await res.json();
+    const sel = document.getElementById('domain-filter');
+    const opts = (data.domains || [])
+      .filter((d) => d.signal_count > 0)
+      .map((d) => `<option value="${esc(d.name)}">${esc(d.name)}（${d.signal_count}）</option>`);
+    sel.innerHTML = '<option value="全部">全部</option>' + opts.join('');
+  } catch {
+    /* 板块元数据不可用时仅保留「全部」 */
+  }
+}
+
 /* ---------- 入口 ---------- */
 async function main() {
   deepId = new URLSearchParams(window.location.search).get('id');
   bindToolbar();
+  loadDomainFilter();
 
   try {
     sigList = await signals.list();

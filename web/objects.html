@@ -10,6 +10,7 @@
 
     /* Object 列表项 */
     .obj-name { font-size: 13px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+    .obj-domains { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 
     /* 类型筛选 */
     .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -75,6 +76,7 @@
     <a class="nav-link" href="./signals.html">Signal 工作台</a>
     <a class="nav-link" href="./trace.html">追溯</a>
     <a class="nav-link active" href="./objects.html">对象全景</a>
+    <a class="nav-link" href="./domains.html">板块管理</a>
   </nav>
 
   <main class="page">
@@ -104,6 +106,10 @@
               <option value="Person">人员</option>
               <option value="Organization">组织</option>
               <option value="Task">任务</option>
+            </select>
+            <label for="domain-filter" class="notice">板块</label>
+            <select id="domain-filter">
+              <option value="全部">全部</option>
             </select>
           </div>
           <div id="obj-list"></div>

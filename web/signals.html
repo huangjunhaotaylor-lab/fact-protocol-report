@@ -119,6 +119,9 @@
     .frag-row .fr-id { font-weight: 600; }
     .frag-row .fr-content { margin-top: 2px; overflow-wrap: anywhere; }
     .frag-row .fr-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    /* 板块徽标行（G3） */
+    .sc-domains { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0 1px; }
   </style>
 </head>
 <body>
@@ -131,6 +134,7 @@
     <a class="nav-link active" href="./signals.html">Signal 工作台</a>
     <a class="nav-link" href="./trace.html">追溯</a>
     <a class="nav-link" href="./objects.html">对象全景</a>
+    <a class="nav-link" href="./domains.html">板块管理</a>
   </nav>
 
   <main class="page">
@@ -160,6 +164,11 @@
             <option value="change">变更</option>
             <option value="status">状态</option>
             <option value="action">行动</option>
+          </select>
+        </label>
+        <label>板块
+          <select id="domain-filter">
+            <option value="全部">全部</option>
           </select>
         </label>
         <label>排序

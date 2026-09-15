@@ -11,6 +11,7 @@
  */
 
 import { evidences, fragments, signals, objects, ApiError } from './api.js';
+import { domainBadge } from './domain-badges.js';
 
 /* ---------- 枚举与中文标签 ---------- */
 const EVIDENCE_SOURCES = [
@@ -395,6 +396,57 @@ function renderAnchorBox() {
   });
 }
 
+/* ---------- 板块识别实时预览（G3：防抖 500ms 调 /api/classify-preview，不落库） ---------- */
+let dpTimer = null;
+let dpSeq = 0;
+
+function hideDomainPreview() {
+  const el = $('sig-domain-preview');
+  el.hidden = true;
+  el.innerHTML = '';
+}
+
+function scheduleDomainPreview() {
+  clearTimeout(dpTimer);
+  const body = $('sig-body').value.trim();
+  if (!body) {
+    dpSeq += 1; // 作废在途响应
+    hideDomainPreview();
+    return;
+  }
+  dpTimer = setTimeout(() => runDomainPreview(body), 500);
+}
+
+async function runDomainPreview(body) {
+  const seq = ++dpSeq;
+  const el = $('sig-domain-preview');
+  try {
+    const res = await fetch('/api/classify-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    });
+    if (!res.ok) return; // 预览失败静默（不影响录入主流程）
+    const c = await res.json();
+    if (seq !== dpSeq) return; // 已有更新的输入，丢弃过期响应
+
+    if (!c.domains || !c.domains.length) {
+      el.innerHTML = `未识别板块<span class="dp-hint">（可保存后在板块管理归口）</span>`;
+      el.hidden = false;
+      return;
+    }
+    const [primary, ...rest] = c.domains;
+    const badges = [
+      domainBadge(primary, { primary: true, label: `${primary}（主线）` }),
+      ...rest.map((d) => domainBadge(d)),
+    ].join('<span class="dp-hint">·</span>');
+    el.innerHTML = `识别为：${badges}<span class="dp-hint">——保存后可修改</span>`;
+    el.hidden = false;
+  } catch {
+    /* 网络异常静默降级 */
+  }
+}
+
 /* body 违禁判断词即时提示（服务端仍做强制校验） */
 function checkBody() {
   const body = $('sig-body').value;
@@ -441,7 +493,10 @@ function initObjectCreate() {
 
 function initSignalForm() {
   fillSelect($('sig-type'), SIGNAL_TYPES);
-  $('sig-body').addEventListener('input', checkBody);
+  $('sig-body').addEventListener('input', () => {
+    checkBody();
+    scheduleDomainPreview();
+  });
   $('sig-conf').addEventListener('input', () => {
     $('sig-conf-val').textContent = Number($('sig-conf').value).toFixed(2);
   });
@@ -504,6 +559,8 @@ function initSignalForm() {
       anchorIds.clear();
       $('sig-body').value = '';
       checkBody();
+      dpSeq += 1;
+      hideDomainPreview();
       $('sig-actors').value = '';
       $('sig-occurred').value = '';
       renderTray();

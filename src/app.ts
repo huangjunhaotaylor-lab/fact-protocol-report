@@ -10,7 +10,7 @@ import { signalRoutes } from './routes/signal.routes';
 import { objectRoutes } from './routes/object.routes';
 import { relationRoutes } from './routes/relation.routes';
 import { graphRoutes } from './routes/graph.routes';
-import { domainRoutes } from './routes/domain.routes';
+import { domainRoutes, classifyPreviewRoute } from './routes/domain.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { logger } from './utils/logger';
 
@@ -39,6 +39,7 @@ export function createApp(): Application {
   app.use('/api/relations', relationRoutes);
   app.use('/api/graph', graphRoutes);
   app.use('/api/domains', domainRoutes);
+  app.use('/api', classifyPreviewRoute);
   app.use('/api/admin', adminRoutes);
 
   // 统一错误处理

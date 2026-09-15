@@ -238,6 +238,20 @@ table.tbl tr:last-child td { border-bottom: none; }
 .badge.st-Merged   { color: #6e6e73; border-color: #c7c7cc; background: #f0f0f2; }
 .badge.st-Created  { color: #8a5a12; border-color: #d8b878; background: #faf4e6; }
 
+/* ---------- 板块徽标（G3：浅底深字细边，色值由 domain-badges.js inline 输出） ---------- */
+.dbadge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.7;
+  border: 1px solid;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.dbadge.primary { font-weight: 700; }
+
 /* ---------- 按钮 ---------- */
 .btn {
   display: inline-block;
@@ -485,6 +499,9 @@ mark.hl {
 .frag-chip .chip-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 3px; align-self: center; }
 .frag-chip .chip-id { font-weight: 600; min-width: 0; overflow-wrap: anywhere; word-break: break-all; }
 .frag-chip .chip-meta { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+/* 关联 Signal 行（G3：占满整行，带板块徽标） */
+.frag-chip .chip-sigs { flex: 1 1 100%; margin: 2px 0 0 18px; font-size: 11.5px; color: var(--muted); line-height: 2; }
+.frag-chip .chip-sig { color: var(--c-signal); }
 
 /* 校验结果 */
 .verify-result { font-size: 12px; font-weight: 600; }

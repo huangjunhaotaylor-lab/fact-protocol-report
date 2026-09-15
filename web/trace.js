@@ -9,6 +9,7 @@
  */
 
 import { signals, ApiError } from './api.js';
+import { domainBadges } from './domain-badges.js';
 
 /* chip 显示中文、data-state 保持英文（数据值不动） */
 const STATE_FILTERS = [
@@ -194,6 +195,7 @@ function renderChain(trace) {
   const metaRows = [
     ['类型', `<span class="badge signal">${esc(zh(SIGTYPE_CN, sig.type))}</span>`],
     ['状态', `<span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>`],
+    ['板块', domainBadges(sig.domains, sig.primary_domain) || '—'],
     ['置信度', `<span class="num">${fmtConf(sig.confidence)}</span>`],
     ['捕获时间', fmtTime(sig.captured_at)],
     ['发生时间', sig.occurred_at ? fmtTime(sig.occurred_at) : '—'],
@@ -247,6 +249,7 @@ function renderChain(trace) {
       <div class="tier t-signal">
         <div class="tier-label"><span>SIGNAL · 业务观察（${trace.chain.length} 条证据链）</span></div>
         <div class="tier-body">「${esc(sig.body)}」</div>
+        ${(sig.domains || []).length ? `<div class="tier-doms">${domainBadges(sig.domains, sig.primary_domain)}</div>` : ''}
       </div>
     </div>
     ${connector('支撑 Fragment ↓')}

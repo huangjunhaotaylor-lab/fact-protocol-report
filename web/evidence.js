@@ -9,7 +9,8 @@
  *   · 归档（PATCH :id/archive，确认后更新徽标）
  */
 
-import { evidences, fragments, ApiError } from './api.js';
+import { evidences, fragments, signals, ApiError } from './api.js';
+import { domainBadges } from './domain-badges.js';
 
 /* Fragment 高亮配色（每片一色，低饱和冷色 tint） */
 const HL_PALETTE = [
@@ -159,6 +160,21 @@ async function select(id) {
     const located = locateFragments(ev, frags);
     const unlocated = frags.filter((f) => !located.some((l) => l.f.id === f.id));
 
+    // Fragment → 关联 Signal（沿锚定展示，不改数据结构；全量拉一次本地映射）
+    let allSignals = [];
+    try {
+      allSignals = await signals.list();
+    } catch {
+      /* Signal 列表不可用时静默降级，仅不展示关联行 */
+    }
+    const sigsByFragment = new Map(); // fragmentId -> Signal[]
+    for (const s of allSignals) {
+      for (const fid of s.fragments || []) {
+        if (!sigsByFragment.has(fid)) sigsByFragment.set(fid, []);
+        sigsByFragment.get(fid).push(s);
+      }
+    }
+
     const metaRows = [
       ['来源', `<span class="badge evidence">${esc(zh(SOURCE_CN, ev.source))}</span>`],
       ['创建时间', fmtTime(ev.created_at)],
@@ -172,8 +188,18 @@ async function select(id) {
       .join('');
 
     const chips = located
-      .map(
-        (l) => `<div class="frag-chip">
+      .map((l) => {
+        // 关联 Signal 行：带板块徽标，点击跳追溯页
+        const relSigs = sigsByFragment.get(l.f.id) || [];
+        const sigRows = relSigs.length
+          ? `<div class="chip-sigs">${relSigs
+              .map(
+                (s) =>
+                  `<a class="chip-sig" href="./trace.html?id=${encodeURIComponent(s.id)}" data-tip="前往追溯页查看 ${esc(s.id)} 证据链"><span class="mono">${esc(s.id)}</span></a> ${domainBadges(s.domains, s.primary_domain)}`,
+              )
+              .join('<br>')}</div>`
+          : '';
+        return `<div class="frag-chip">
         <span class="chip-dot" style="background:${l.color.border}"></span>
         <span class="chip-id mono">${esc(l.f.id)}</span>
         <span class="badge fragment">${esc(zh(FRAGTYPE_CN, l.f.type))}</span>
@@ -181,8 +207,9 @@ async function select(id) {
           l.f.page !== undefined ? ' · p.' + l.f.page : ''
         }</span>
         <span class="badge st-${esc(l.f.state)}">${esc(zh(STATE_CN, l.f.state))}</span>
-      </div>`,
-      )
+        ${sigRows}
+      </div>`;
+      })
       .join('');
 
     body.innerHTML = `

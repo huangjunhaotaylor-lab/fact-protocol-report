@@ -3,6 +3,7 @@
  *
  * 职责：
  * - 板块字典查询 + 计数（GET /api/domains）
+ * - 板块关键词管理（GET/PUT /api/domains/:name/keywords — G3）
  * - 人工纠正信号板块（POST /api/signals/:id/domains）
  * - 存量回填（POST /api/admin/reclassify）
  *
@@ -16,7 +17,7 @@ import { Signal } from '../types';
 import { signalRepository, objectRepository } from '../repositories';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
-import { DOMAIN_DICTIONARY, BUILTIN_DOMAINS } from '../domain/dictionary';
+import { loadDictionary, setDomainKeywords } from '../domain/dictionary-store';
 import { classifyDomains } from '../domain/classifier';
 import { recalcObjectDomains, recalcAllObjectDomains } from '../domain/propagation';
 
@@ -44,15 +45,18 @@ export interface ReclassifyResult {
 export class DomainService {
   /**
    * 板块字典 + 计数
-   * - 含 7 个内置板块 + 数据里出现过的其他板块名（人工纠正可能引入字典外板块）
+   * - 含当前生效字典（持久化优先、内置兜底）的全部板块 + 数据里出现过的其他板块名
+   *   （人工纠正可能引入字典外板块）
    * - 字典外板块 keywords 返回空数组
    */
   listDomains(): DomainListResult {
     const signals = signalRepository.findAll();
     const objects = objectRepository.findAll();
+    const dictionary = loadDictionary();
+    const dictNames = Object.keys(dictionary);
 
     // 收集数据里出现过的全部板块名
-    const seen = new Set<string>(BUILTIN_DOMAINS);
+    const seen = new Set<string>(dictNames);
     const extras = new Set<string>();
     const collect = (domains?: string[]) => {
       for (const d of domains ?? []) {
@@ -63,13 +67,13 @@ export class DomainService {
     for (const o of objects) collect(o.domains);
 
     const names = [
-      ...BUILTIN_DOMAINS,
+      ...dictNames,
       ...Array.from(extras).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')),
     ];
 
     const domains: DomainSummary[] = names.map((name) => ({
       name,
-      keywords: DOMAIN_DICTIONARY[name] ?? [],
+      keywords: dictionary[name] ?? [],
       signal_count: signals.filter((s) => (s.domains ?? []).includes(name)).length,
       object_count: objects.filter((o) => (o.domains ?? []).includes(name)).length,
     }));
@@ -77,6 +81,24 @@ export class DomainService {
     const unclassified = signals.filter((s) => (s.domains ?? []).length === 0).length;
 
     return { domains, unclassified_signals: unclassified };
+  }
+
+  /**
+   * 读取某板块的关键词（GET /api/domains/:name/keywords）
+   * 字典外板块返回空数组（不 404：人工纠正可能引入字典外板块，允许随后 PUT 建档）
+   */
+  getKeywords(name: string): { name: string; keywords: string[] } {
+    const dictionary = loadDictionary();
+    return { name, keywords: dictionary[name] ?? [] };
+  }
+
+  /**
+   * 整体替换某板块关键词（PUT /api/domains/:name/keywords）
+   * 校验由 dictionary-store 完成（非空字符串数组）；写入后分类器立即生效
+   */
+  updateKeywords(name: string, keywords: unknown): { name: string; keywords: string[] } {
+    const cleaned = setDomainKeywords(name, keywords);
+    return { name: name.trim(), keywords: cleaned };
   }
 
   /**
