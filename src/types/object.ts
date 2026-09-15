@@ -54,6 +54,10 @@ export interface ObjectOptionalFields {
   aliases?: string[];
   /** 附加属性 */
   attributes?: Record<string, unknown>;
+  /** 业务板块（G0：由其全部锚定信号的板块并集传导而来） */
+  domains?: string[];
+  /** 主线板块（锚定信号 primary_domain 计票最高者；无信号板块时为 null） */
+  primary_domain?: string | null;
 }
 
 /** Object 完整接口 */

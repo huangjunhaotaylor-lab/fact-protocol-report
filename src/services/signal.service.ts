@@ -22,6 +22,8 @@ import { Signal, SignalType, SignalState, SignalContext } from '../types';
 import { signalRepository, fragmentRepository, objectRepository } from '../repositories';
 import { generateId, logger, NotFoundError, StateTransitionError, ProtocolViolationError, ForbiddenError } from '../utils';
 import { validateSignalBody } from '../validators/signal-body.validator';
+import { classifyDomains } from '../domain/classifier';
+import { recalcObjectDomains } from '../domain/propagation';
 
 export interface CreateSignalInput {
   type: SignalType;
@@ -91,6 +93,9 @@ export class SignalService {
       );
     }
 
+    // G0：创建时对 body 跑板块分类器，domains / primary_domain / domain_scores 随信号持久化
+    const classification = classifyDomains(input.body);
+
     const signal: Signal = {
       id: generateId('Signal'),
       type: input.type,
@@ -101,12 +106,21 @@ export class SignalService {
       state: 'Captured',
       captured_at: new Date().toISOString(),
       confidence: input.confidence,
+      domains: classification.domains,
+      primary_domain: classification.primary_domain,
+      domain_scores: classification.domain_scores,
       ...(input.actors !== undefined && { actors: input.actors }),
       ...(input.occurred_at !== undefined && { occurred_at: input.occurred_at }),
       ...(input.attributes !== undefined && { attributes: input.attributes }),
     };
 
     signalRepository.create(signal);
+
+    // G0 板块传导：同步重算锚定 Object 的 domains / primary_domain
+    for (const objId of input.anchors) {
+      recalcObjectDomains(objId);
+    }
+
     logger.info(`Signal created: ${signal.id} (type: ${signal.type}, confidence: ${signal.confidence})`);
     return signal;
   }

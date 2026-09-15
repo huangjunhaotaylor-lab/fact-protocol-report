@@ -9,6 +9,7 @@
  * POST   /api/signals/:id/verify             — 标记 Signal 为 Verified (Captured → Verified, 12.9)
  * POST   /api/signals/:id/invalid            — 标记 Signal 为 Invalid (Captured → Invalid, 12.10)
  * PATCH  /api/signals/:id/archive            — 归档 Signal (Verified → Archived)
+ * POST   /api/signals/:id/domains            — G0: 人工纠正 Signal 板块（记录 domain_manual）
  * GET    /api/signals/:id/fragments          — AC-009: 查看支撑 Signal 的 Fragment
  * GET    /api/signals/:id/trace              — 12.8: Signal → Fragment → Evidence 全链路追溯
  *
@@ -17,6 +18,7 @@
 
 import { Router, Request, Response } from 'express';
 import { signalService } from '../services/signal.service';
+import { domainService } from '../services/domain.service';
 import { traceQuery } from '../queries/trace.query';
 import { BSPError } from '../utils/errors';
 
@@ -100,6 +102,22 @@ signalRoutes.post('/:id/invalid', (req: Request, res: Response) => {
 signalRoutes.patch('/:id/archive', (req: Request, res: Response) => {
   try {
     res.json(signalService.archive(req.params.id));
+  } catch (error) {
+    if (error instanceof BSPError) {
+      res.status(error.statusCode).json(error.toJSON());
+    } else {
+      res
+        .status(500)
+        .json({ error: { code: 'INTERNAL_ERROR', message: (error as Error).message } });
+    }
+  }
+});
+
+// G0: 人工纠正 Signal 板块（覆盖 domains/primary_domain，记录 domain_manual 并重算 Object 传导）
+signalRoutes.post('/:id/domains', (req: Request, res: Response) => {
+  try {
+    const { domains, primary_domain } = req.body ?? {};
+    res.json(domainService.manualCorrect(req.params.id, domains, primary_domain));
   } catch (error) {
     if (error instanceof BSPError) {
       res.status(error.statusCode).json(error.toJSON());

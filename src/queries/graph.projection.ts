@@ -66,6 +66,10 @@ export interface GraphNode {
   confidence?: number;
   /** Evidence / Fragment 专用：checksum 现算校验结果 */
   checksum_ok?: boolean;
+  /** G0：业务板块（Signal 自身分类 / Object 传导；其余 kind 不带） */
+  domains?: string[];
+  /** G0：主线板块 */
+  primary_domain?: string | null;
   /** 原始协议对象全量（供检查器面板） */
   data: Evidence | Fragment | Signal | BSPObject | Relation;
 }
@@ -94,6 +98,14 @@ export interface GraphQueryOptions {
   limit?: number;
   /** 节点类型过滤 */
   kinds?: GraphNodeKind[];
+  /**
+   * G0：业务板块过滤
+   * - Signal 按自身 domains 含该板块过滤
+   * - Object 按自身 domains 含该板块过滤
+   * - Fragment / Evidence 跟随其关联 Signal（Fragment 被保留 Signal 引用；Evidence 含保留 Fragment）
+   * - Relation 两端 Object 都保留才保留
+   */
+  domain?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +175,8 @@ function projectSignal(sig: Signal): GraphNode {
     captured_at: sig.captured_at,
     occurred_at: sig.occurred_at,
     confidence: sig.confidence,
+    domains: sig.domains ?? [],
+    primary_domain: sig.primary_domain ?? null,
     data: sig,
   };
 }
@@ -175,6 +189,8 @@ function projectObject(obj: BSPObject): GraphNode {
     state: obj.state,
     type: obj.type,
     created_at: obj.created_at,
+    domains: obj.domains ?? [],
+    primary_domain: obj.primary_domain ?? null,
     data: obj,
   };
 }
@@ -336,12 +352,63 @@ function buildEdges(raw: RawData): GraphEdge[] {
 }
 
 // ---------------------------------------------------------------------------
+// 板块过滤（G0）
+// ---------------------------------------------------------------------------
+
+/**
+ * 按板块过滤节点：
+ * - Signal / Object：自身 domains 含该板块
+ * - Fragment：被保留 Signal 引用（跟随其关联 Signal）
+ * - Evidence：含被保留 Fragment（跟随其关联 Signal）
+ * - Relation：两端 Object 都保留才保留
+ */
+function filterByDomain(raw: RawData, nodes: GraphNode[], domain: string): GraphNode[] {
+  const keptSignalIds = new Set(
+    raw.signals.filter((s) => (s.domains ?? []).includes(domain)).map((s) => s.id),
+  );
+  const keptFragmentIds = new Set(
+    raw.fragments
+      .filter((f) => raw.signals.some((s) => keptSignalIds.has(s.id) && s.fragments.includes(f.id)))
+      .map((f) => f.id),
+  );
+  const keptEvidenceIds = new Set(
+    raw.evidences
+      .filter((e) => raw.fragments.some((f) => keptFragmentIds.has(f.id) && f.evidence_id === e.id))
+      .map((e) => e.id),
+  );
+  const keptObjectIds = new Set(
+    raw.objects.filter((o) => (o.domains ?? []).includes(domain)).map((o) => o.id),
+  );
+  const keptRelationIds = new Set(
+    raw.relations
+      .filter((r) => keptObjectIds.has(r.source) && keptObjectIds.has(r.target))
+      .map((r) => r.id),
+  );
+
+  return nodes.filter((n) => {
+    switch (n.kind) {
+      case 'Signal':
+        return keptSignalIds.has(n.id);
+      case 'Object':
+        return keptObjectIds.has(n.id);
+      case 'Fragment':
+        return keptFragmentIds.has(n.id);
+      case 'Evidence':
+        return keptEvidenceIds.has(n.id);
+      case 'Relation':
+        return keptRelationIds.has(n.id);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 查询：全图投影
 // ---------------------------------------------------------------------------
 
 /**
  * 全图投影
  * - kinds 过滤节点类型（只保留两端节点均存活的边）
+ * - domain 板块过滤（G0，语义见 filterByDomain）
  * - limit 节点数上限保护（默认 500），超限返回 truncated:true
  */
 export function projectGraph(options: GraphQueryOptions = {}): GraphProjection {
@@ -360,6 +427,11 @@ export function projectGraph(options: GraphQueryOptions = {}): GraphProjection {
 
   if (kindFilter) {
     nodes = nodes.filter((n) => kindFilter.has(n.kind));
+  }
+
+  // G0：板块过滤（先于 limit，total 计过滤后的真实规模）
+  if (options.domain) {
+    nodes = filterByDomain(raw, nodes, options.domain);
   }
 
   const total = nodes.length;
@@ -473,6 +545,8 @@ const SEARCH_ATTR_MAP: Record<string, 'state' | 'type' | 'source'> = {
   状态: 'state',
   类型: 'type',
   来源: 'source',
+  // 注意：「板块」是 G0 新增的特殊属性（匹配 domains 数组包含），
+  // 不走字段映射，在 searchGraph 内单独处理
 };
 
 /** 节点类型中文别名 → 英文 kind */
@@ -502,10 +576,12 @@ function fullTextOf(node: GraphNode): string {
 /**
  * 结构化搜索
  *
- * 支持两类查询：
+ * 支持三类查询：
  * 1. 「类型 + 属性中文名 + 值」短语：如 "Signal 状态 Captured"、"Object 类型 Customer"、
  *    "Evidence 来源 meeting"（属性映射：状态→state、类型→type、来源→source）
- * 2. 纯关键词全文：匹配 label / body / name / content 前 200 字（大小写不敏感）
+ * 2. 「类型 + 板块 + 板块名」短语（G0）：如 "信号 板块 仓储运营"，
+ *    匹配节点 domains 数组包含该板块（Signal / Object 节点）
+ * 3. 纯关键词全文：匹配 label / body / name / content 前 200 字（大小写不敏感）
  *
  * kind 参数进一步限定返回节点类型。
  */
@@ -531,21 +607,31 @@ export function searchGraph(query: string, kind?: string): GraphSearchResult {
     ?? (GRAPH_NODE_KINDS.includes(tokens[0] as GraphNodeKind) ? (tokens[0] as GraphNodeKind) : undefined);
   if (tokens.length >= 3 && kindTok) {
     const phraseKind = kindTok;
-    const attr = SEARCH_ATTR_MAP[tokens[1]];
-    if (attr) {
-      const rawValue = tokens.slice(2).join(' ').toLowerCase();
-      const value = SEARCH_VALUE_ALIAS[rawValue] ?? rawValue;
+    if (tokens[1] === '板块') {
+      // G0：板块短语 — 匹配节点 domains 数组包含该板块名（大小写敏感，板块名是中文专有词）
+      const value = tokens.slice(2).join(' ');
       hits = full.nodes.filter((n) => {
         if (n.kind !== phraseKind) return false;
         if (kind && n.kind !== kind) return false;
-        const raw =
-          attr === 'source'
-            ? (n.data as Evidence).source ?? n.type
-            : (n as unknown as Record<string, unknown>)[attr];
-        return typeof raw === 'string' && raw.toLowerCase() === value;
+        return (n.domains ?? []).includes(value);
       });
     } else {
-      hits = keywordSearch(candidates, q);
+      const attr = SEARCH_ATTR_MAP[tokens[1]];
+      if (attr) {
+        const rawValue = tokens.slice(2).join(' ').toLowerCase();
+        const value = SEARCH_VALUE_ALIAS[rawValue] ?? rawValue;
+        hits = full.nodes.filter((n) => {
+          if (n.kind !== phraseKind) return false;
+          if (kind && n.kind !== kind) return false;
+          const raw =
+            attr === 'source'
+              ? (n.data as Evidence).source ?? n.type
+              : (n as unknown as Record<string, unknown>)[attr];
+          return typeof raw === 'string' && raw.toLowerCase() === value;
+        });
+      } else {
+        hits = keywordSearch(candidates, q);
+      }
     }
   } else {
     hits = keywordSearch(candidates, q);
@@ -581,19 +667,27 @@ export interface GraphStats {
   state_counts: Partial<Record<GraphNodeKind, Record<string, number>>>;
   /** 各 kind 的类型分布 */
   type_counts: Partial<Record<GraphNodeKind, Record<string, number>>>;
+  /** G0：板块分布（统计 Signal / Object 节点 domains 命中数，一个节点可计入多个板块） */
+  domain_counts: Record<string, number>;
 }
 
-/** 直方图数据（时间 / 类型 / 状态分桶） */
-export function graphStats(): GraphStats {
-  const { nodes } = projectGraph({ limit: Number.MAX_SAFE_INTEGER });
+/** 直方图数据（时间 / 类型 / 状态分桶）；G0：支持 domain 板块过滤，输出 domain_counts */
+export function graphStats(domain?: string): GraphStats {
+  const { nodes } = projectGraph({ limit: Number.MAX_SAFE_INTEGER, domain });
 
   const buckets = new Map<string, GraphTimeBucket>();
   const kindCounts: Partial<Record<GraphNodeKind, number>> = {};
   const stateCounts: Partial<Record<GraphNodeKind, Record<string, number>>> = {};
   const typeCounts: Partial<Record<GraphNodeKind, Record<string, number>>> = {};
+  const domainCounts: Record<string, number> = {};
 
   for (const node of nodes) {
     kindCounts[node.kind] = (kindCounts[node.kind] ?? 0) + 1;
+
+    // G0：板块分布（仅 Signal / Object 节点带 domains 字段）
+    for (const d of node.domains ?? []) {
+      domainCounts[d] = (domainCounts[d] ?? 0) + 1;
+    }
 
     if (node.state) {
       const byKind = (stateCounts[node.kind] ??= {});
@@ -624,6 +718,7 @@ export function graphStats(): GraphStats {
     kind_counts: kindCounts,
     state_counts: stateCounts,
     type_counts: typeCounts,
+    domain_counts: domainCounts,
   };
 }
 

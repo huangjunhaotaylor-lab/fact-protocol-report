@@ -70,6 +70,14 @@ export interface SignalOptionalFields {
   occurred_at?: string;
   /** 附加属性 */
   attributes?: Record<string, unknown>;
+  /** 业务板块（G0：分类器/人工纠正写入，按得分降序） */
+  domains?: string[];
+  /** 主线板块（无命中时为 null） */
+  primary_domain?: string | null;
+  /** 各命中板块的得分（仅分类器自动分类时写入） */
+  domain_scores?: Record<string, number>;
+  /** 板块是否经人工纠正（为 true 时存量回填跳过该信号） */
+  domain_manual?: boolean;
 }
 
 /** Signal 完整接口 */
