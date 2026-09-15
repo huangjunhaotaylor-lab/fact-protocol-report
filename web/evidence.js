@@ -11,14 +11,14 @@
 
 import { evidences, fragments, ApiError } from './api.js';
 
-/* Fragment 高亮配色（每片一色，暖色系 tint） */
+/* Fragment 高亮配色（每片一色，低饱和冷色 tint） */
 const HL_PALETTE = [
-  { bg: '#f2e0cc', border: '#a67c52' },
-  { bg: '#f6e8d2', border: '#c2a15a' },
-  { bg: '#f3dcd0', border: '#b06a4a' },
-  { bg: '#e6e8dc', border: '#7d8471' },
-  { bg: '#eae6da', border: '#8a8578' },
-  { bg: '#dfe5e0', border: '#6f7d72' },
+  { bg: '#dde4ee', border: '#64748b' },
+  { bg: '#f4ecd8', border: '#b7791f' },
+  { bg: '#e0e8f1', border: '#4a5568' },
+  { bg: '#dcebe4', border: '#52796f' },
+  { bg: '#e6e6ea', border: '#718096' },
+  { bg: '#e4e9f2', border: '#5d6d7e' },
 ];
 
 /** 展示层中文映射：数据值 / data-* 一律保持英文，未命中原样显示 */

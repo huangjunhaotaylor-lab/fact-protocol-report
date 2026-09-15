@@ -783,7 +783,7 @@ function renderTracePanel() {
     body.append(fbox);
   }
 
-  // 底部：Evidence 原文区（当前选中 Fragment 陶土高亮）
+  // 底部：Evidence 原文区（当前选中 Fragment 石墨高亮）
   const pos = state.traceSel ? t.fragPos.get(state.traceSel) : null;
   const txt = el('div', 'tc-text');
   txt.append(el('div', 'bf-title', 'Evidence 原文'));

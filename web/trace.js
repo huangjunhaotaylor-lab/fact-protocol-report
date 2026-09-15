@@ -18,7 +18,7 @@ const STATE_FILTERS = [
   { v: 'Invalid', zh: '无效' },
   { v: 'Archived', zh: '已归档' },
 ];
-const HL = { bg: '#f2e0cc', border: '#a67c52' };
+const HL = { bg: '#dde3ec', border: '#4a5568' };
 
 /** 展示层中文映射：数据值 / data-* 一律保持英文，未命中原样显示 */
 const STATE_CN = {

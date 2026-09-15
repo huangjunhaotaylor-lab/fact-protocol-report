@@ -65,7 +65,7 @@ function mockGraph() {
     addEdge(pick(evidences), id, 'HAS_FRAGMENT'); // 每个碎片挂一份证据
   }
 
-  // Signal ×60（陶土圆 · confidence · captured_at/occurred_at）
+  // Signal ×60（石墨圆 · confidence · captured_at/occurred_at）
   const sigTypes = ['交付延迟', '库存异常', '报价变更', '质量投诉', '账期风险', '数量短缺'];
   const signals = [];
   for (let i = 1; i <= 60; i++) {
@@ -172,7 +172,7 @@ const engine = new GraphEngine($('graph'), {
       `<div class="tt-meta">` +
       `<div><span class="k">状态</span>${esc(node.state ?? '—')}</div>` +
       (node.confidence != null ? `<div><span class="k">置信度</span><span class="num">${node.confidence.toFixed(2)}</span></div>` : '') +
-      (node.checksum_ok === false ? `<div><span class="k">checksum</span><b style="color:#b06a4a">校验失败</b></div>` : '') +
+      (node.checksum_ok === false ? `<div><span class="k">checksum</span><b style="color:#c53030">校验失败</b></div>` : '') +
       `<div><span class="k">连接度</span><span class="num">${node.degree}</span></div>` +
       `<div><span class="k">钉住</span>${node.pinned ? '是（右键可释放）' : '否'}</div>` +
       `</div>`;
@@ -188,7 +188,7 @@ engine.setData(nodes, edges);
 setTimeout(() => engine.zoomToFit(true), 350);
 
 function kindColor(kind) {
-  return { Evidence: '#a67c52', Fragment: '#b8ab97', Signal: '#b06a4a', Object: '#7d8471', Relation: '#8a8578' }[kind] || '#8a8578';
+  return { Evidence: '#64748b', Fragment: '#9aa5b1', Signal: '#4a5568', Object: '#52796f', Relation: '#718096' }[kind] || '#718096';
 }
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -324,7 +324,7 @@ function drawHisto() {
   for (const t of timed) bins[Math.min(BINS - 1, Math.floor(((t - T0) / (T1 - T0)) * BINS))]++;
   const max = Math.max(...bins, 1);
   const bw = w / BINS;
-  ctx.fillStyle = '#d9d0c0';
+  ctx.fillStyle = '#d2d2d7';
   for (let i = 0; i < BINS; i++) {
     const bh = Math.max(2, (bins[i] / max) * (h - 4));
     ctx.fillRect(i * bw + 1, h - bh, bw - 2, bh);

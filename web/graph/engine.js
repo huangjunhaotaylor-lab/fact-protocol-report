@@ -1,6 +1,6 @@
 /* ============================================================
    BSP Business Graph OS — G1 图引擎内核（GraphEngine）
-   纯 Canvas 2D + 原生 ES Module · 零外部依赖 · 暖色系
+   纯 Canvas 2D + 原生 ES Module · 零外部依赖 · 苹果风专业色系
    ------------------------------------------------------------
    分区：
      1. 设计令牌与常量
@@ -22,28 +22,28 @@
    ------------------------------------------------------------ */
 
 export const KIND_COLORS = {
-  Evidence: '#a67c52', // 土棕
-  Fragment: '#b8ab97', // 暖灰
-  Signal:   '#b06a4a', // 陶土
-  Object:   '#7d8471', // 灰绿
-  Relation: '#8a8578', // 浅棕灰
+  Evidence: '#64748b', // 石板蓝灰
+  Fragment: '#9aa5b1', // 浅石灰
+  Signal:   '#4a5568', // 石墨蓝灰（主角色）
+  Object:   '#52796f', // 灰青
+  Relation: '#718096', // 中灰
 };
 
 const C = {
-  bg:          '#faf7f2',
-  grid:        '#ede5d8',
-  ink:         '#3a3226',
-  edge:        '#d9d0c0',
-  accent:      '#b06a4a',
-  lockBad:     '#b06a4a',
-  lockOk:      'rgba(255,253,249,0.92)',
-  stCaptured:  '#c2a15a',
-  stVerified:  '#7d8471',
-  desat:       '#b8ab97', // Invalid 去饱和填充
-  minimapBg:   '#fffdf9',
-  minimapLine: '#e3dccd',
-  labelHalo:   'rgba(250,247,242,0.92)',
-  marqueeFill: 'rgba(176,106,74,0.10)',
+  bg:          '#f5f5f7',
+  grid:        '#e4e4e8',
+  ink:         '#1d1d1f',
+  edge:        '#d2d2d7',
+  accent:      '#4a5568',
+  lockBad:     '#c53030',
+  lockOk:      'rgba(255,255,255,0.92)',
+  stCaptured:  '#b7791f',
+  stVerified:  '#2f855a',
+  desat:       '#b9bfc7', // Invalid 去饱和填充
+  minimapBg:   '#ffffff',
+  minimapLine: '#d2d2d7',
+  labelHalo:   'rgba(245,245,247,0.92)',
+  marqueeFill: 'rgba(74,85,104,0.10)',
 };
 
 const LAYOUT = {
@@ -687,7 +687,7 @@ export class GraphEngine {
       const { x, y, r } = nd;
       const selected = this.selection.has(nd.id);
       const invalid = nd.state === 'Invalid';
-      const fill = invalid ? C.desat : (KIND_COLORS[nd.kind] || '#8a8578');
+      const fill = invalid ? C.desat : (KIND_COLORS[nd.kind] || '#718096');
 
       ctx.globalAlpha = Math.min(1, a);
 
@@ -747,7 +747,7 @@ export class GraphEngine {
         ctx.stroke();
       }
 
-      // 选中环：#b06a4a 2px 外环
+      // 选中环：#4a5568 2px 外环
       if (selected) {
         ctx.strokeStyle = C.accent;
         ctx.lineWidth = 2 / z;
@@ -791,7 +791,7 @@ export class GraphEngine {
     ctx.globalAlpha = 1;
   }
 
-  /** 框选选框：半透明陶土 */
+  /** 框选选框：半透明石墨 */
   _drawMarquee(ctx) {
     const m = this._marquee;
     if (!m) return;
@@ -1079,7 +1079,7 @@ export class GraphEngine {
     // 全图缩略（按类型着色的小点，透明度跟随时间窗）
     for (const nd of this.nodes) {
       ctx.globalAlpha = 0.75 * Math.min(1, nd._tAlpha + 0.15);
-      ctx.fillStyle = KIND_COLORS[nd.kind] || '#8a8578';
+      ctx.fillStyle = KIND_COLORS[nd.kind] || '#718096';
       ctx.fillRect(toX(nd.x) - 1.1, toY(nd.y) - 1.1, 2.2, 2.2);
     }
 
@@ -1155,7 +1155,7 @@ export class GraphEngine {
     this.dimSet = idSet ? new Set(idSet) : null;
   }
 
-  /** 高亮路径：指定节点与边以陶土色 2.5 宽渲染 */
+  /** 高亮路径：指定节点与边以石墨色 2.5 宽渲染 */
   highlightPath(nodeIds = [], edgeIds = []) {
     this.hlNodes = new Set(nodeIds);
     this.hlEdges = new Set(edgeIds);

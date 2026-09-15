@@ -13,10 +13,10 @@
 import { objects, relations, ApiError } from './api.js';
 
 const STATE_COLORS = {
-  Captured: '#c2a15a',
-  Verified: '#7d8471',
-  Invalid: '#b06a4a',
-  Archived: '#c9c2b4',
+  Captured: '#b7791f',
+  Verified: '#2f855a',
+  Invalid: '#c53030',
+  Archived: '#86868b',
 };
 
 /** 展示层中文映射：数据值 / value / data-* 一律保持英文，未命中原样显示 */
@@ -173,7 +173,7 @@ function renderTimeline(data) {
     .map((s, i) => {
       const t = new Date(sigTime(s)).getTime();
       const x = xOf(i, t);
-      const color = STATE_COLORS[s.state] || '#c9c2b4';
+      const color = STATE_COLORS[s.state] || '#86868b';
       // 上下交替排布，避免拥挤
       const up = i % 2 === 0;
       const cy = up ? AXIS_Y - 26 : AXIS_Y - 14;
@@ -181,7 +181,7 @@ function renderTimeline(data) {
       return `<g class="tl-dot" data-id="${esc(s.id)}">
         <title>${esc(tip)}</title>
         <line x1="${x}" y1="${cy}" x2="${x}" y2="${AXIS_Y}" stroke="${color}" stroke-width="1" stroke-dasharray="2 2"/>
-        <circle cx="${x}" cy="${cy}" r="6" fill="${color}" stroke="#fffdf9" stroke-width="1.5"/>
+        <circle cx="${x}" cy="${cy}" r="6" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
       </g>`;
     })
     .join('');
