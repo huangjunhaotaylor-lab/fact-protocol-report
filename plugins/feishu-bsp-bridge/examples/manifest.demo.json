@@ -1,0 +1,19 @@
+{
+  "continueOnError": true,
+  "documents": [
+    {
+      "doc": "W6qTdjo97oL50NxATnScG93SnoF",
+      "objectName": "仓库盘点流程",
+      "signalBody": "仓库目前还是使用 Excel 进行盘点。",
+      "signalType": "observation"
+    },
+    {
+      "doc": "Eyl8dLcbKovODuxuIkHc09KTn3c",
+      "objectName": "智慧仓储系统",
+      "signalBody": "盘点模块二期范围覆盖华南仓全部库区。",
+      "signalType": "status",
+      "domains": ["仓储运营"],
+      "primary_domain": "仓储运营"
+    }
+  ]
+}

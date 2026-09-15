@@ -11,7 +11,7 @@
  */
 
 import { evidences, fragments, signals, objects, ApiError } from './api.js';
-import { domainBadge } from './domain-badges.js';
+import { domainBadge, domainBadges } from './domain-badges.js';
 
 /* ---------- 枚举与中文标签 ---------- */
 const EVIDENCE_SOURCES = [
@@ -121,6 +121,71 @@ function renderLog() {
 }
 
 /* ---------- 第一步：Evidence ---------- */
+
+/* G4：文件导入（纯前端，复用 POST /api/evidences，不加新端点） */
+const IMPORT_MAX_BYTES = 512 * 1024; // 大文件保护阈值 512KB
+
+function setFileInfo(html) {
+  $('ev-file-info').innerHTML = html;
+}
+
+/**
+ * 解析导入文件文本：
+ * - .json 若能解析出 { content: string, source?: string } 结构则用其字段
+ *   （source 命中 EvidenceSource 枚举时同步来源下拉框），否则整个原文导入
+ * - 其他扩展名（.txt/.md/.csv 等）一律整个原文导入
+ */
+function applyImportedFile(name, text) {
+  let content = text;
+  let note = '';
+  if (/\.json$/i.test(name)) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
+        content = parsed.content;
+        if (typeof parsed.source === 'string' && EVIDENCE_SOURCES.some(([v]) => v === parsed.source)) {
+          $('ev-source').value = parsed.source;
+          note = ` · 已用 JSON 的 content / source（${parsed.source}）字段`;
+        } else {
+          note = ' · 已用 JSON 的 content 字段';
+        }
+      }
+    } catch {
+      /* 非合法 JSON：整个原文导入 */
+    }
+  }
+  $('ev-content').value = content;
+  $('ev-count').textContent = `${content.length} 字`;
+  setFileInfo(`已导入：<span class="fi-name">${esc(name)}</span> · <span class="num">${content.length}</span> 字${esc(note)}`);
+}
+
+function initFileImport() {
+  const input = $('ev-file-input');
+  $('ev-import-btn').addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    input.value = ''; // 允许连续选择同一文件
+    if (!file) return;
+    if (file.size > IMPORT_MAX_BYTES) {
+      const kb = Math.round(file.size / 1024);
+      const ok = window.confirm(
+        `文件「${file.name}」约 ${kb} KB，超过 512KB。导入大文件可能造成页面卡顿，仍要导入吗？`,
+      );
+      if (!ok) return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        applyImportedFile(file.name, String(reader.result ?? ''));
+      } catch (err) {
+        showError(err);
+      }
+    };
+    reader.onerror = () => showError(new Error(`读取文件失败：${file.name}`));
+    reader.readAsText(file);
+  });
+}
+
 function initEvidenceForm() {
   fillSelect($('ev-source'), EVIDENCE_SOURCES);
   $('ev-content').addEventListener('input', () => {
@@ -157,6 +222,7 @@ function initEvidenceForm() {
       </div>`;
       $('ev-form').reset();
       $('ev-count').textContent = '0 字';
+      setFileInfo('支持 .txt / .md / .json / .csv，大文件（>512KB）会先确认');
 
       // 自动设为当前工作 Evidence 并跳到第二步
       workEvidenceId = ev.id;
@@ -543,11 +609,17 @@ function initSignalForm() {
 
       const sig = await signals.create(input);
       pushLog('Signal', sig.id, preview(sig.body, 60));
+      // G4：保存后展示服务端自动分类的板块徽标（G0 classifyDomains 已随信号持久化）
+      const sigDomains = Array.isArray(sig.domains) ? sig.domains : [];
+      const domainLine = sigDomains.length
+        ? `板块 ${domainBadges(sigDomains, sig.primary_domain)}`
+        : '板块 <span class="dp-hint">未识别（可在「板块管理」归口）</span>';
       $('sig-result').innerHTML = `<div class="ok-box">
         Signal 已创建：<span class="ok-id mono">${esc(sig.id)}</span>
         · 状态 <span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>
         · 引用 <span class="num">${sig.fragments.length}</span> 个 Fragment
         · 锚定 <span class="num">${sig.anchors.length}</span> 个 Object
+        <div style="margin-top:6px">${domainLine}</div>
         <div style="margin-top:6px">
           <a href="./trace.html?id=${encodeURIComponent(sig.id)}">前往追溯查看完整证据链 →</a>
           &nbsp;&nbsp;<a href="./signals.html?id=${encodeURIComponent(sig.id)}">前往 Signal 工作台确认 →</a>
@@ -579,6 +651,7 @@ function initSignalForm() {
 /* ---------- 入口 ---------- */
 async function main() {
   initEvidenceForm();
+  initFileImport();
   initFragmentForm();
   initSignalForm();
   initObjectCreate();

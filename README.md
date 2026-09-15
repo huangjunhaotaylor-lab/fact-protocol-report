@@ -59,7 +59,7 @@ git checkout -b feature/your-feature
 | 页面 | 路径 | 说明 |
 | --- | --- | --- |
 | 总览 | `/static/index.html` | Reality Map：核心链路（Evidence → Fragment → Signal → Object → Relation → Timeline）实时状态与协议原则 |
-| 录入台 | `/static/intake.html` | Evidence / Fragment / Signal 统一录入 |
+| 录入台 | `/static/intake.html` | Evidence / Fragment / Signal 统一录入（Evidence 支持「从文件导入」.txt/.md/.json/.csv，纯前端读入原文框） |
 | 证据库 | `/static/evidence.html` | Evidence 列表、原文查看与 Fragment 划取 |
 | Signal 工作台 | `/static/signals.html` | Signal 校验（Verify）、标记 Invalid、归档 |
 | 追溯 | `/static/trace.html` | Signal → Fragment → Evidence 全链路反查 |

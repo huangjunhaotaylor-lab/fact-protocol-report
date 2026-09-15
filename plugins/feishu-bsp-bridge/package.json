@@ -1,0 +1,17 @@
+{
+  "name": "feishu-bsp-bridge",
+  "version": "0.1.0",
+  "description": "飞书 → BSP 独立插件：读取飞书云文档(docx/wiki)，按 BSP 1.1 协议写入 Reality Layer（Evidence → Fragment → Signal → Object）",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": ["feishu", "lark", "bsp", "fact-protocol", "reality-layer", "evidence"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
