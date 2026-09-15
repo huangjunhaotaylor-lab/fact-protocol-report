@@ -12,6 +12,7 @@ import { relationRoutes } from './routes/relation.routes';
 import { graphRoutes } from './routes/graph.routes';
 import { domainRoutes, classifyPreviewRoute } from './routes/domain.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { aiRoutes } from './routes/ai.routes';
 import { logger } from './utils/logger';
 
 export function createApp(): Application {
@@ -41,6 +42,7 @@ export function createApp(): Application {
   app.use('/api/domains', domainRoutes);
   app.use('/api', classifyPreviewRoute);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/ai', aiRoutes);
 
   // 统一错误处理
   app.use(

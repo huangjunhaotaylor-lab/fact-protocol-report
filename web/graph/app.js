@@ -13,7 +13,8 @@
      9. 研判模式（过滤器 + 时间直方图滑杆）
     10. 场景（保存 / 加载 / 导出 / 导入）
     11. 杂项 UI（toast / 空态 / 加载 / 折叠 / 键盘）
-    12. 启动
+    12. AI 解读（节点级 + 视图级浮层 / 未配置引导 / 配置对话框）
+    13. 启动
    ============================================================ */
 
 import { GraphEngine, DOMAIN_COLORS } from './engine.js';
@@ -375,6 +376,7 @@ function openMenu(nd, x, y) {
   addItem('展开邻居', () => expandNode(nd));
   addItem('收起邻居', () => collapseNeighbors(nd), !(state.expandedFrom.get(nd.id) || new Set()).size);
   addItem('聚焦', () => engine.focusNode(nd.id));
+  addItem('✦ AI 解读', () => interpretNode(nd));
   addItem('释放钉住', () => { engine.setPinned(nd.id, false); toast('已释放钉住'); }, !nd.pinned);
   addSep();
   if (nd.kind === 'Signal') addItem('进入追溯', () => enterTrace(nd));
@@ -631,8 +633,11 @@ function renderInspector(nd) {
     body.append(rel);
   }
 
-  // 底部操作（同右键菜单，按状态机渲染）
+  // 底部操作（AI 解读常驻；其余同右键菜单，按状态机渲染）
   const actions = el('div', 'bi-actions');
+  const aiBtn = el('button', 'btn small bi-act bi-ai', '✦ AI 解读');
+  aiBtn.addEventListener('click', () => interpretNode(nd));
+  actions.append(aiBtn);
   if (nd.kind === 'Signal') {
     const tb = el('button', 'btn small bi-act', '进入追溯');
     tb.addEventListener('click', () => enterTrace(nd));
@@ -1320,6 +1325,8 @@ function bindEvents() {
 
   // 场景
   $('sceneBtn').addEventListener('click', (e) => { e.stopPropagation(); openSceneMenu(); });
+  // 全局 AI 解读（当前视图 / 追溯链）
+  $('aiViewBtn').addEventListener('click', () => interpretView());
   document.addEventListener('click', (e) => {
     if (!$('sceneMenu').hidden && !e.target.closest('.bgo-scenebox')) closeSceneMenu();
     if (!$('menu').hidden && !e.target.closest('#menu')) closeMenu();
@@ -1417,13 +1424,309 @@ function bindEvents() {
     if (e.key !== 'Escape') return;
     closeMenu();
     closeSceneMenu();
+    if (closeAnyAIModal()) return; // AI 浮层 / 配置框优先关闭，不联动退出追溯
     if (state.trace) exitTrace();
     else applyDimIsolated(); // 引擎 Esc 清了 dim，按需恢复孤立降噪
   });
 }
 
 /* ------------------------------------------------------------
-   12. 启动
+   12. AI 解读（节点级 + 视图级浮层 / 未配置引导 / 配置对话框）
+   ------------------------------------------------------------ */
+
+let aiModal = null;      // AI 解读浮层单例 { mask, title, sub, body, foot }
+let aiCfgModal = null;   // 配置对话框单例 { mask, base, model, key, err, save, needKey }
+let aiCfgResolve = null; // 配置对话框挂起的 Promise 解铃（保存 → true / 取消 → false）
+
+/** 四节标题（命中即渲染为小标题） */
+const AI_SECTION_RE = /^[#*\s>]*(?:【)?\s*(摘要|事实依据|可能含义（推断）|可能含义\(推断\)|建议关注点)\s*(?:】)?\s*[:：]?\s*$/;
+
+/** 证据链 ID 识别（渲染为等宽小字） */
+const AI_ID_RE = /\b(EV|FRG|SIG|OBJ|REL|IDT)-[^\s，。、；：（）()「」【】"']+/g;
+
+function ensureAIModal() {
+  if (aiModal) return aiModal;
+  const mask = el('div', 'bgo-aimodal-mask');
+  mask.hidden = true;
+  const card = el('div', 'bgo-aimodal');
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-label', 'AI 解读');
+
+  const head = el('div', 'am-head');
+  const title = el('span', 'am-title', 'AI 解读');
+  const sub = el('span', 'am-sub');
+  const gear = el('button', 'am-iconbtn', '⚙');
+  gear.title = 'AI 服务配置';
+  gear.addEventListener('click', () => { openAIConfig(); });
+  const close = el('button', 'am-iconbtn', '×');
+  close.title = '关闭（Esc）';
+  close.addEventListener('click', closeAIModal);
+  head.append(title, sub, gear, close);
+
+  const body = el('div', 'am-body');
+  const foot = el('div', 'am-foot');
+  foot.hidden = true;
+  card.append(head, body, foot);
+  mask.append(card);
+  mask.addEventListener('mousedown', (e) => { if (e.target === mask) closeAIModal(); });
+  document.body.append(mask);
+  aiModal = { mask, title, sub, body, foot };
+  return aiModal;
+}
+
+function closeAIModal() { if (aiModal) aiModal.mask.hidden = true; }
+
+/** Esc 优先关闭 AI 相关浮层；返回是否消费了本次按键 */
+function closeAnyAIModal() {
+  if (aiCfgModal && !aiCfgModal.mask.hidden) { closeAIConfig(false); return true; }
+  if (aiModal && !aiModal.mask.hidden) { closeAIModal(); return true; }
+  return false;
+}
+
+function aiShowLoading() {
+  const m = ensureAIModal();
+  m.foot.hidden = true;
+  m.body.textContent = '';
+  const box = el('div', 'am-loading');
+  const dots = el('span', 'am-dots');
+  dots.append(el('i'), el('i'), el('i'));
+  box.append(dots, el('span', null, '正在结合证据链解读…'));
+  m.body.append(box);
+}
+
+/** 段落内联渲染：证据链 ID → 等宽小字 */
+function aiAppendRich(par, text) {
+  let last = 0;
+  let m;
+  AI_ID_RE.lastIndex = 0;
+  while ((m = AI_ID_RE.exec(text))) {
+    if (m.index > last) par.append(document.createTextNode(text.slice(last, m.index)));
+    par.append(el('code', 'am-id', m[0]));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) par.append(document.createTextNode(text.slice(last)));
+}
+
+function aiRenderResult(data) {
+  const m = ensureAIModal();
+  m.body.textContent = '';
+  const article = el('div', 'am-result');
+  for (const raw of String(data.interpretation || '').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const hm = line.match(AI_SECTION_RE);
+    if (hm) {
+      // 统一标题文案（兼容半角括号变体）
+      article.append(el('h4', null, hm[1].replace('(', '（').replace(')', '）')));
+      continue;
+    }
+    const li = line.match(/^[-*•]\s+(.*)$/);
+    const par = el('p', li ? 'am-li' : null);
+    aiAppendRich(par, li ? li[1] : line);
+    article.append(par);
+  }
+  m.body.append(article);
+
+  const c = data.context || {};
+  m.foot.textContent = '';
+  m.foot.append(el('span', 'am-meta',
+    `上下文：${c.node_count ?? 0} 节点 · 证据 ×${(c.evidence_ids || []).length} · 信号 ×${(c.signal_ids || []).length} · 模型 ${data.model || '—'}`));
+  if (data.truncated) m.foot.append(el('span', 'am-badge', '视图已截断'));
+  if (data.cached) m.foot.append(el('span', 'am-badge', 'cached'));
+  m.foot.hidden = false;
+}
+
+function aiRenderError(msg, retry) {
+  const m = ensureAIModal();
+  m.foot.hidden = true;
+  m.body.textContent = '';
+  const box = el('div', 'am-error');
+  box.append(el('div', 'am-erricon', '⚠'));
+  box.append(el('div', 'am-errmsg', msg));
+  const btn = el('button', 'btn small', '重试');
+  btn.addEventListener('click', retry);
+  box.append(btn);
+  m.body.append(box);
+}
+
+/** 浮层主流程：loading → 请求 → 结果 / 错误（可重试） */
+async function aiRun(title, sub, makeReq) {
+  const m = ensureAIModal();
+  m.title.textContent = title;
+  m.sub.textContent = sub || '';
+  m.sub.title = sub || '';
+  m.mask.hidden = false;
+  aiShowLoading();
+  try {
+    const data = await makeReq();
+    aiRenderResult(data);
+  } catch (err) {
+    aiRenderError(err.message, () => aiRun(title, sub, makeReq));
+    toast(`AI 解读失败：${err.message}`, 'warn');
+  }
+}
+
+/** 确认已配置；未配置则弹配置对话框，保存后 resolve(true) 继续原请求 */
+async function aiEnsureConfigured() {
+  try {
+    const st = await api('/api/ai/status');
+    if (st.configured) return true;
+  } catch (_) { /* 状态查询失败同样走配置引导 */ }
+  return await openAIConfig();
+}
+
+/** 节点级解读入口（右键菜单 / 检查器） */
+async function interpretNode(nd) {
+  closeMenu();
+  if (!(await aiEnsureConfigured())) { toast('AI 服务未配置，已取消解读', 'warn'); return; }
+  await aiRun(`AI 解读 · ${KIND_CN[nd.kind] || nd.kind}`, nd.id, () =>
+    api('/api/ai/interpret', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: nd.kind, id: nd.id }),
+    }));
+}
+
+/** 视图级解读入口（顶栏）：探索/研判取当前可见节点；追溯取链上节点 */
+async function interpretView() {
+  let nodeIds;
+  let sub;
+  if (state.trace) {
+    nodeIds = [...state.trace.nodeIds];
+    sub = `追溯链 · ${nodeIds.length} 节点`;
+  } else {
+    nodeIds = engine.nodes.map((n) => n.id);
+    sub = `当前视图 · ${nodeIds.length} 节点`;
+  }
+  if (!nodeIds.length) { toast('画布为空，无可解读内容', 'warn'); return; }
+  if (!(await aiEnsureConfigured())) { toast('AI 服务未配置，已取消解读', 'warn'); return; }
+  await aiRun('当前视图解读', sub, () =>
+    api('/api/ai/interpret-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        node_ids: nodeIds,
+        lens: { domain: state.domain || null, time_window: state.timeWindow },
+      }),
+    }));
+}
+
+/* ----- AI 配置对话框 ----- */
+
+function ensureAICfgModal() {
+  if (aiCfgModal) return aiCfgModal;
+  const mask = el('div', 'bgo-cfgmodal-mask');
+  mask.hidden = true;
+  const card = el('div', 'bgo-cfgmodal');
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-label', 'AI 服务配置');
+
+  const head = el('div', 'am-head');
+  head.append(el('span', 'am-title', 'AI 服务配置'));
+  const close = el('button', 'am-iconbtn', '×');
+  close.title = '关闭（Esc）';
+  close.addEventListener('click', () => closeAIConfig(false));
+  head.append(el('span', 'am-sub'), close);
+
+  const body = el('div', 'am-body');
+  body.append(el('div', 'cm-hint', 'OpenAI 兼容接口（chat completions）。配置保存在服务端本地 data/ai-config.json，API Key 不会回显。'));
+
+  const mkField = (label, type, ph) => {
+    const box = el('div', 'cm-field');
+    box.append(el('label', null, label));
+    const input = el('input');
+    input.type = type;
+    input.placeholder = ph;
+    box.append(input);
+    body.append(box);
+    return input;
+  };
+  const base = mkField('Base URL', 'text', 'https://api.openai.com/v1');
+  const model = mkField('Model', 'text', 'gpt-4o-mini');
+  const key = mkField('API Key', 'password', 'sk-…');
+
+  const err = el('div', 'cm-err');
+  body.append(err);
+
+  const foot = el('div', 'cm-foot');
+  const cancel = el('button', 'btn small', '取消');
+  cancel.addEventListener('click', () => closeAIConfig(false));
+  const save = el('button', 'btn small primary', '保存并继续');
+  save.addEventListener('click', () => { saveAIConfig(); });
+  foot.append(cancel, save);
+
+  card.append(head, body, foot);
+  mask.append(card);
+  mask.addEventListener('mousedown', (e) => { if (e.target === mask) closeAIConfig(false); });
+  // 输入框内 Enter = 保存
+  for (const input of [base, model, key]) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); saveAIConfig(); }
+      e.stopPropagation();
+    });
+  }
+  document.body.append(mask);
+  aiCfgModal = { mask, base, model, key, err, save, needKey: true };
+  return aiCfgModal;
+}
+
+/** 打开配置对话框；resolve(true)=已保存（继续原请求），resolve(false)=取消 */
+function openAIConfig() {
+  return new Promise((resolve) => {
+    if (aiCfgResolve) aiCfgResolve(false); // 防重入：上一个挂起请求按取消处理
+    const m = ensureAICfgModal();
+    aiCfgResolve = resolve;
+    m.err.textContent = '';
+    m.key.value = '';
+    m.mask.hidden = false;
+    api('/api/ai/status').then((st) => {
+      if (st && st.base_url) m.base.value = st.base_url;
+      if (st && st.model) m.model.value = st.model;
+      m.needKey = !(st && st.configured);
+      m.key.placeholder = m.needKey ? 'sk-…（必填）' : '（已配置，留空则保持不变）';
+    }).catch(() => { m.needKey = true; });
+    m.key.focus();
+  });
+}
+
+function closeAIConfig(ok) {
+  if (!aiCfgModal) return;
+  aiCfgModal.mask.hidden = true;
+  if (aiCfgResolve) {
+    const r = aiCfgResolve;
+    aiCfgResolve = null;
+    r(!!ok);
+  }
+}
+
+async function saveAIConfig() {
+  const m = ensureAICfgModal();
+  const base_url = m.base.value.trim();
+  const model = m.model.value.trim();
+  const api_key = m.key.value.trim();
+  if (!base_url || !model) { m.err.textContent = 'Base URL 与 Model 均需填写'; return; }
+  if (m.needKey && !api_key) { m.err.textContent = '请填写 API Key'; return; }
+  m.save.disabled = true;
+  m.err.textContent = '';
+  try {
+    const body = { base_url, model };
+    if (api_key) body.api_key = api_key;
+    await api('/api/ai/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    toast('AI 配置已保存');
+    closeAIConfig(true);
+  } catch (err2) {
+    m.err.textContent = `保存失败：${err2.message}`;
+  } finally {
+    m.save.disabled = false;
+  }
+}
+
+/* ------------------------------------------------------------
+   13. 启动
    ------------------------------------------------------------ */
 
 async function init() {
