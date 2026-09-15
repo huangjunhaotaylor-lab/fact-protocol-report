@@ -163,20 +163,20 @@
   margin: -1px;
 }
 
-/* ---------- 时间直方图滑杆 ---------- */
+/* ---------- 时间直方图滑杆（紧凑版） ---------- */
 .graph-timebar {
   background: var(--card-bg, #ffffff);
   border-top: 1px solid var(--line, #d2d2d7);
-  padding: 10px 20px 8px;
+  padding: 6px 20px 4px;
 }
 .graph-timebar .gt-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--muted, #86868b);
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 .graph-timebar .gt-head .gt-window-label {
   color: var(--c-signal, #4a5568);
@@ -187,22 +187,22 @@
 
 .gt-track {
   position: relative;
-  height: 64px;
+  height: 40px;
 }
 .gt-track canvas.gt-histo {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 18px;
+  bottom: 13px;
   width: 100%;
-  height: 44px;
+  height: 24px;
   display: block;
 }
 /* 时间窗高亮带 */
 .gt-window {
   position: absolute;
-  bottom: 18px;
-  height: 44px;
+  bottom: 13px;
+  height: 24px;
   background: rgba(74, 85, 104, 0.08);
   border-left: 1.5px solid var(--c-signal, #4a5568);
   border-right: 1.5px solid var(--c-signal, #4a5568);
@@ -212,10 +212,10 @@
 .gt-track input[type="range"] {
   position: absolute;
   left: 0;
-  bottom: 2px;
+  bottom: 0;
   width: 100%;
   margin: 0;
-  height: 18px;
+  height: 14px;
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -229,12 +229,12 @@
   -webkit-appearance: none;
   appearance: none;
   pointer-events: auto;
-  width: 14px;
-  height: 14px;
-  margin-top: -5.5px;
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
   border-radius: 50%;
   background: var(--c-signal, #4a5568);
-  border: 2.5px solid var(--card-bg, #ffffff);
+  border: 2px solid var(--card-bg, #ffffff);
   cursor: ew-resize;
 }
 .gt-track input[type="range"]::-moz-range-track {
@@ -243,11 +243,11 @@
 }
 .gt-track input[type="range"]::-moz-range-thumb {
   pointer-events: auto;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--c-signal, #4a5568);
-  border: 2.5px solid var(--card-bg, #ffffff);
+  border: 2px solid var(--card-bg, #ffffff);
   cursor: ew-resize;
 }
 /* 轨道基线 */
@@ -256,7 +256,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 9.5px;
+  bottom: 5.5px;
   height: 3px;
   border-radius: 2px;
   background: var(--line, #d2d2d7);
@@ -266,10 +266,10 @@
 .gt-scale {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted, #86868b);
   font-variant-numeric: tabular-nums;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* ---------- 验证台（harness）骨架 ---------- */
@@ -367,6 +367,9 @@
   cursor: pointer;
 }
 .bgo-domain-sel:focus { outline: none; border-color: var(--c-signal, #4a5568); }
+
+/* 顶栏布局切换器（力导向/时间轴，紧凑 seg） */
+.bgo-layout-seg button { padding: 4px 10px; font-size: 12px; }
 
 .bgo-scenebox { position: relative; }
 .bgo-dropdown {
@@ -934,6 +937,7 @@
   .bgo-top { gap: 10px; padding: 10px 12px; }
   .bgo-search { max-width: 320px; }
   .bgo-domain-sel { max-width: 128px; }
+  .bgo-layout-seg button { padding: 4px 7px; font-size: 11.5px; }
 }
 @media (max-width: 860px) {
   .bgo-filters, .bgo-inspector { position: absolute; z-index: 8; top: 0; bottom: 0; }

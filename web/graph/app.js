@@ -99,9 +99,11 @@ const state = {
   histo: null,                // { min, max, buckets: [{start,end,count}] }
   currentScene: null,         // 当前加载/保存的场景名
   traceSel: null,             // 追溯面板当前选中的 fragment id
+  layout: 'force',            // 画布布局：force | time
 };
 
 const SCENE_KEY = 'bgo-scenes';
+const LAYOUT_KEY = 'bgo-layout'; // 布局选择持久化
 const FRAG_COLORS = 6; // 原文高亮六色循环
 
 /* ------------------------------------------------------------
@@ -859,6 +861,19 @@ function setMode(m) {
   }
 }
 
+/** 布局切换（力导向 / 时间轴）：即时生效 + localStorage 持久化 */
+function setLayout(mode, opts = {}) {
+  if (mode !== 'force' && mode !== 'time') return;
+  state.layout = mode;
+  for (const b of $('layoutSeg').querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.layout === mode);
+  }
+  engine.setLayout(mode);
+  if (!opts.skipSave) {
+    try { localStorage.setItem(LAYOUT_KEY, mode); } catch (_) { /* 隐私模式忽略 */ }
+  }
+}
+
 function updateFilterCounts() {
   const counts = {};
   for (const n of state.master.nodes.values()) counts[n.kind] = (counts[n.kind] || 0) + 1;
@@ -1052,6 +1067,7 @@ function snapshotScene(name) {
     hidden: [...state.hidden],
     domain: state.domain || '',
     timeWindow: state.timeWindow,
+    layout: state.layout,
     savedAt: new Date().toISOString(),
   };
 }
@@ -1105,6 +1121,9 @@ async function loadSceneData(sc) {
   } else {
     resetTimeWindow();
   }
+
+  // 布局（力导向/时间轴）：场景字段缺省回落力导向
+  setLayout(sc.layout === 'time' ? 'time' : 'force');
 
   state.currentScene = sc.name || null;
   const n = engine.nodes.length;
@@ -1288,6 +1307,11 @@ function bindEvents() {
     b.addEventListener('click', () => setMode(b.dataset.mode));
   }
 
+  // 布局切换（力导向 / 时间轴）
+  for (const b of $('layoutSeg').querySelectorAll('button')) {
+    b.addEventListener('click', () => setLayout(b.dataset.layout));
+  }
+
   // 板块聚焦（顶栏切换器：淡化模式，不移除节点、不动相机）
   $('domainSel').addEventListener('change', (e) => {
     state.domain = e.target.value;
@@ -1404,6 +1428,14 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  // 恢复上次布局选择（引擎侧在数据加载后生效，保证时间轴按全景计算目标）
+  let savedLayout = 'force';
+  try { savedLayout = localStorage.getItem(LAYOUT_KEY) || 'force'; } catch (_) { /* 隐私模式 */ }
+  if (savedLayout !== 'time') savedLayout = 'force';
+  state.layout = savedLayout;
+  for (const b of $('layoutSeg').querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.layout === savedLayout);
+  }
   showLoading(true);
   try {
     const stats = await api('/api/graph/stats');
@@ -1436,6 +1468,7 @@ async function init() {
       updateEmptyState();
     }
     updateFilterCounts();
+    if (savedLayout === 'time') engine.setLayout('time'); // 恢复时间轴布局（300ms 插值入位）
   } catch (err) {
     toast(`初始化失败：${err.message}`);
     updateEmptyState();

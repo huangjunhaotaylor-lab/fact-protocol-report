@@ -76,6 +76,13 @@ const LAYOUT = {
 };
 
 const CAM = { minZoom: 0.15, maxZoom: 4, animMs: 300, wheelRate: 0.0016 };
+
+/** 时间轴布局：五条水平泳道（自上而下）；x 轴左右留边 8%，y 轴上下留边 10% */
+export const TIME_LANES = ['Evidence', 'Fragment', 'Signal', 'Object', 'Relation'];
+export const TIME_LANE_CN = {
+  Evidence: '证据', Fragment: '片段', Signal: '信号', Object: '对象', Relation: '关系',
+};
+const TIMELAYOUT = { marginX: 0.08, marginY: 0.1, jitter: 0.6 };
 const MINIMAP = { w: 160, h: 100, margin: 12, pad: 16 };
 const TIME_FADE_MS = 200;         // 时间窗/板块显隐过渡时长
 const OUT_OF_WINDOW_ALPHA = 0.08; // 窗外/域外节点边透明度
@@ -108,6 +115,17 @@ export const GraphMath = {
 
   clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
+  },
+
+  /** 确定性 id 散列 → [0,1)：泳道内纵向抖动等需要可复现错位的场景（不随帧跳变） */
+  hash01(str) {
+    let h = 2166136261;
+    const s = String(str);
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return ((h >>> 0) % 1000) / 1000;
   },
 
   /**
@@ -281,6 +299,9 @@ export class GraphEngine {
     // 布局状态
     this.alpha = 0;      // >0 表示布局活跃；0 表示休眠
     this.sizing = 'fixed';
+    this.layout = 'force';    // 'force' | 'time'（时间轴泳道布局）
+    this._layoutAnim = null;  // 布局切换 300ms 位置插值 { t0, dur }
+    this._timeMeta = null;    // 时间轴布局元数据 { x0, x1, yTop, yBot, tMin, tMax, laneH }
 
     // 视觉状态
     this.selection = new Set(); // 选中节点 id
@@ -375,6 +396,9 @@ export class GraphEngine {
         _tAlphaTarget: 1, // 时间窗目标透明度
         _dAlpha: 1,       // 板块当前透明度
         _dAlphaTarget: 1, // 板块目标透明度
+        _tgtX: null,      // 时间轴布局目标 x（null = 未计算）
+        _tgtY: null,      // 时间轴布局目标 y
+        _lx0: 0, _ly0: 0, // 布局切换动画起点
       });
       this.nodes.push(nd);
       this.nodeById.set(nd.id, nd);
@@ -394,6 +418,7 @@ export class GraphEngine {
     for (const nd of this.nodes) nd.r = this._radius(nd);
     if (this.timeWindow) this._applyTimeWindow();
     if (this.domain) this._applyDomain();
+    if (this.layout === 'time') this._retimeSnap();
     this._wake(1);
   }
 
@@ -414,6 +439,7 @@ export class GraphEngine {
     if (this.hoverNode && kill.has(this.hoverNode.id)) this._setHover(null);
     if (this.timeWindow) this._applyTimeWindow();
     if (this.domain) this._applyDomain();
+    if (this.layout === 'time') this._retimeSnap();
     this._wake(0.6);
   }
 
@@ -459,6 +485,137 @@ export class GraphEngine {
     GraphMath.verletVelocities(this.nodes, this.alpha, LAYOUT.damping, LAYOUT.maxSpeed);
     this.alpha *= LAYOUT.alphaDecay;
     if (this.alpha < LAYOUT.alphaMin) this.alpha = 0; // 休眠：之后每帧跳过力计算
+  }
+
+  /* ----- 时间轴布局（x = 时间 · y = 类型泳道 · 切换 300ms 插值） ----- */
+
+  /**
+   * 布局切换：'force' | 'time'。
+   * - time：力模拟完全停摆（alpha=0），全图按 时间×泳道 计算目标位置，
+   *   300ms easeOutCubic 插值过渡（非瞬移）；拖动节点仍允许（拖后偏离泳道不纠）。
+   * - force：从当前位置热启动力模拟（alpha 重置为 1）。
+   */
+  setLayout(mode) {
+    if (mode !== 'force' && mode !== 'time') return;
+    if (mode === this.layout) return;
+    this.layout = mode;
+    if (mode === 'time') {
+      this.alpha = 0; // 力模拟停摆
+      this._computeTimeTargets();
+      // 全部节点（含此前钉住的）归位到泳道目标
+      for (const nd of this.nodes) { nd._lx0 = nd.x; nd._ly0 = nd.y; }
+      this._layoutAnim = { t0: performance.now(), dur: CAM.animMs };
+    } else {
+      this._layoutAnim = null;
+      this._timeMeta = null;
+      for (const nd of this.nodes) { nd._tgtX = null; nd._tgtY = null; }
+      this._wake(1); // 从当前位置重新热启动
+    }
+  }
+
+  /**
+   * 计算时间轴目标位置（写入 nd._tgtX/_tgtY 与 this._timeMeta）。
+   * 布局盒 = 切换时刻的可见世界矩形（相机不动时恰好铺满视口）：
+   *   x：全图最早→最晚映射到盒宽（留边 8%）；单时间点扩 ±12h 防除零；
+   *   y：Evidence/Fragment/Signal/Object/Relation 五泳道等分盒高（留边 10%），
+   *      泳道内按 id 散列确定性纵向抖动（不随帧跳变）；
+   *   无时间的 Fragment：x 取关联 Evidence（沿边查）的目标 x，无可达时取已定位邻居均值；
+   *   Relation：x/y 取两端（全部邻居）目标均值。
+   */
+  _computeTimeTargets() {
+    const nodes = this.nodes;
+    const vw = this.w / this.cam.z, vh = this.h / this.cam.z;
+    const x0 = this.cam.x - vw / 2 + vw * TIMELAYOUT.marginX;
+    const x1 = this.cam.x + vw / 2 - vw * TIMELAYOUT.marginX;
+    const yTop = this.cam.y - vh / 2 + vh * TIMELAYOUT.marginY;
+    const yBot = this.cam.y + vh / 2 - vh * TIMELAYOUT.marginY;
+    const laneH = (yBot - yTop) / TIME_LANES.length;
+
+    let tMin = Infinity, tMax = -Infinity;
+    for (const nd of nodes) {
+      if (nd._time == null) continue;
+      if (nd._time < tMin) tMin = nd._time;
+      if (nd._time > tMax) tMax = nd._time;
+    }
+    const hasT = Number.isFinite(tMin);
+    if (hasT && tMin === tMax) { tMin -= 43200000; tMax += 43200000; } // ±12h
+
+    const laneIdx = (kind) => {
+      const i = TIME_LANES.indexOf(kind);
+      return i < 0 ? TIME_LANES.length - 1 : i;
+    };
+    const laneY = (kind) => yTop + laneH * (laneIdx(kind) + 0.5);
+    const xOf = (t) => x0 + ((t - tMin) / (tMax - tMin)) * (x1 - x0);
+    const jitter = (nd) => (GraphMath.hash01(nd.id) - 0.5) * laneH * TIMELAYOUT.jitter;
+
+    // 第一遍：有时间字段的节点按自身时间落 x
+    for (const nd of nodes) {
+      if (nd._time == null) continue;
+      nd._tgtX = xOf(nd._time);
+      nd._tgtY = laneY(nd.kind) + jitter(nd);
+    }
+    // 第二遍（两遍传播，覆盖 无时间→无时间→有时间 短链）：
+    // 无时间非 Relation —— Fragment 优先跟随关联 Evidence，否则取已定位邻居 x 均值
+    for (let pass = 0; pass < 2; pass++) {
+      for (const nd of nodes) {
+        if (nd._time != null || nd.kind === 'Relation') continue;
+        if (pass > 0 && nd._tgtX != null) continue;
+        const nb = (this.adj.get(nd.id) || []).map((a) => a.node);
+        const evs = nb.filter((n) => n.kind === 'Evidence' && n._tgtX != null);
+        const src = evs.length ? evs : nb.filter((n) => n._tgtX != null);
+        if (!src.length) continue;
+        nd._tgtX = src.reduce((s, n) => s + n._tgtX, 0) / src.length;
+        nd._tgtY = laneY(nd.kind) + jitter(nd);
+      }
+    }
+    for (const nd of nodes) {
+      if (nd._time == null && nd.kind !== 'Relation' && nd._tgtX == null) {
+        nd._tgtX = (x0 + x1) / 2;
+        nd._tgtY = laneY(nd.kind) + jitter(nd);
+      }
+    }
+    // 第三遍：Relation —— 两端目标均值（x 均值，y 在两端泳道之间）
+    for (const nd of nodes) {
+      if (nd.kind !== 'Relation' || nd._time != null) continue;
+      const nb = (this.adj.get(nd.id) || []).map((a) => a.node).filter((n) => n._tgtX != null);
+      if (nb.length) {
+        nd._tgtX = nb.reduce((s, n) => s + n._tgtX, 0) / nb.length;
+        nd._tgtY = nb.reduce((s, n) => s + n._tgtY, 0) / nb.length;
+      } else {
+        nd._tgtX = (x0 + x1) / 2;
+        nd._tgtY = laneY('Relation') + jitter(nd);
+      }
+    }
+
+    this._timeMeta = { x0, x1, yTop, yBot, tMin: hasT ? tMin : null, tMax: hasT ? tMax : null, laneH };
+  }
+
+  /** 时间轴模式下数据增删后重算目标；无动画进行中时未钉住节点直接归位（拖动过的 pinned 节点保持偏离） */
+  _retimeSnap() {
+    this._computeTimeTargets();
+    if (this._layoutAnim) return; // 动画进行中由插值收敛
+    const dragNode = this._drag && this._drag.node;
+    for (const nd of this.nodes) {
+      if (nd._tgtX == null || nd === dragNode || nd.pinned) continue;
+      nd.x = nd._tgtX; nd.y = nd._tgtY;
+      nd.vx = 0; nd.vy = 0;
+    }
+  }
+
+  /** 布局切换 300ms 插值（easeOutCubic，同相机动画）；正在拖动的节点跳过 */
+  _stepLayoutAnim(t) {
+    const a = this._layoutAnim;
+    if (!a) return;
+    const p = Math.min(1, (t - a.t0) / a.dur);
+    const e = GraphMath.easeOutCubic(p);
+    const dragNode = this._drag && this._drag.node;
+    for (const nd of this.nodes) {
+      if (nd._tgtX == null || nd === dragNode) continue;
+      nd.x = nd._lx0 + (nd._tgtX - nd._lx0) * e;
+      nd.y = nd._ly0 + (nd._tgtY - nd._ly0) * e;
+      nd.vx = 0; nd.vy = 0;
+    }
+    if (p >= 1) this._layoutAnim = null;
   }
 
   /* ------------------------------------------------------------
@@ -552,7 +709,8 @@ export class GraphEngine {
     }
 
     if (this._camAnim) this._stepCamAnim(t);
-    if (this.alpha > 0) this._layoutStep(); // 休眠时跳过力计算
+    if (this._layoutAnim) this._stepLayoutAnim(t);          // 布局切换 300ms 位置插值
+    if (this.alpha > 0 && this.layout !== 'time') this._layoutStep(); // 休眠/时间轴模式跳过力计算
     this._stepDimAlpha(dt);                 // 时间窗/板块透明度插值
     this._render(this.ctx, {});             // 每帧重绘
 
@@ -574,6 +732,7 @@ export class GraphEngine {
     ctx.translate(-cam.x, -cam.y);
 
     this._drawGrid(ctx, w, h);
+    if (this.layout === 'time' && this._timeMeta) this._drawTimelineAxis(ctx);
     this._drawEdges(ctx);
     this._drawNodes(ctx);
     this._drawLabels(ctx);
@@ -602,6 +761,56 @@ export class GraphEngine {
       }
     }
     ctx.globalAlpha = 1;
+  }
+
+  /**
+   * 时间轴模式的坐标装饰（世界空间，随相机缩放平移）：
+   * 左侧淡色泳道名（--muted 11px）+ 底部按月刻度（竖细线 + YYYY-MM 文字）。
+   * 月步长自适应：刻度总数控制在 12 格以内。
+   */
+  _drawTimelineAxis(ctx) {
+    const m = this._timeMeta;
+    const z = this.cam.z;
+    ctx.save();
+    ctx.font = `${11 / z}px ${FONT_STACK}`;
+
+    // 泳道标签（布局盒左缘外侧，右对齐于泳道中线）
+    ctx.fillStyle = '#86868b';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < TIME_LANES.length; i++) {
+      const y = m.yTop + m.laneH * (i + 0.5);
+      ctx.fillText(TIME_LANE_CN[TIME_LANES[i]], m.x0 - 14 / z, y);
+    }
+
+    // 月份刻度：竖细线贯穿泳道区 + 底部月份文字
+    if (m.tMin != null && m.tMax != null) {
+      const xOf = (t) => m.x0 + ((t - m.tMin) / (m.tMax - m.tMin)) * (m.x1 - m.x0);
+      const d0 = new Date(m.tMin), d1 = new Date(m.tMax);
+      const months = (d1.getFullYear() - d0.getFullYear()) * 12 + (d1.getMonth() - d0.getMonth()) + 1;
+      let step = 1;
+      while (months / step > 12) step *= 2;
+      ctx.strokeStyle = C.grid;
+      ctx.lineWidth = 1 / z;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      // 第一条 ≥ tMin 的月界
+      let cur = new Date(d0.getFullYear(), d0.getMonth(), 1);
+      if (cur.getTime() < m.tMin) cur = new Date(cur.getFullYear(), cur.getMonth() + step, 1);
+      while (cur.getTime() <= m.tMax) {
+        const x = xOf(cur.getTime());
+        ctx.beginPath();
+        ctx.moveTo(x, m.yTop);
+        ctx.lineTo(x, m.yBot);
+        ctx.stroke();
+        ctx.fillText(
+          `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`,
+          x, m.yBot + 8 / z,
+        );
+        cur = new Date(cur.getFullYear(), cur.getMonth() + step, 1);
+      }
+    }
+    ctx.restore();
   }
 
   _edgeDash(kind, z) {
