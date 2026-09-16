@@ -10,6 +10,7 @@
 
 import { signals, ApiError } from './api.js';
 import { domainBadges } from './domain-badges.js';
+import { expIcon } from './explain.js';
 
 /* chip 显示中文、data-state 保持英文（数据值不动） */
 const STATE_FILTERS = [
@@ -114,7 +115,7 @@ function renderList() {
       <div class="sig-meta">
         <span>${fmtTime(s.captured_at)}</span>
         <span>
-          置信度 <span class="conf">${fmtConf(s.confidence)}</span>
+          置信度${expIcon('confidence')} <span class="conf">${fmtConf(s.confidence)}</span>
           <span class="badge st-${esc(s.state)}">${esc(zh(STATE_CN, s.state))}</span>
         </span>
       </div>
@@ -193,15 +194,15 @@ function renderChain(trace) {
     .join(' · ');
 
   const metaRows = [
-    ['类型', `<span class="badge signal">${esc(zh(SIGTYPE_CN, sig.type))}</span>`],
-    ['状态', `<span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>`],
-    ['板块', domainBadges(sig.domains, sig.primary_domain) || '—'],
-    ['置信度', `<span class="num">${fmtConf(sig.confidence)}</span>`],
+    ['类型' + expIcon('signal-type'), `<span class="badge signal">${esc(zh(SIGTYPE_CN, sig.type))}</span>`],
+    ['状态' + expIcon('state-machine'), `<span class="badge st-${esc(sig.state)}">${esc(zh(STATE_CN, sig.state))}</span>`],
+    ['板块' + expIcon('domain'), domainBadges(sig.domains, sig.primary_domain) || '—'],
+    ['置信度' + expIcon('confidence'), `<span class="num">${fmtConf(sig.confidence)}</span>`],
     ['捕获时间', fmtTime(sig.captured_at)],
     ['发生时间', sig.occurred_at ? fmtTime(sig.occurred_at) : '—'],
     ['相关者', (sig.actors || []).join('、') || '—'],
-    ['锚定对象', anchors || '—'],
-    ['上下文', esc(ctxText) || '—'],
+    ['锚定对象' + expIcon('anchor'), anchors || '—'],
+    ['上下文' + expIcon('signal-context'), esc(ctxText) || '—'],
   ]
     .map(([k, v]) => `<div><span class="mk">${k}：</span><span class="mv">${v}</span></div>`)
     .join('');
@@ -210,7 +211,7 @@ function renderChain(trace) {
     return `
       <div class="detail-head"><span class="d-id mono">${esc(sig.id)}</span></div>
       <div class="meta-grid">${metaRows}</div>
-      <p class="notice">该 Signal 的 Fragment 引用均无法解析（数据可能不完整）。</p>`;
+      <p class="notice">这条信号引用的关键句找不到了（数据可能不完整）。</p>`;
   }
 
   const branches = trace.chain
@@ -218,19 +219,19 @@ function renderChain(trace) {
       return `<div class="chain-branch">
         <div class="tier t-fragment">
           <div class="tier-label">
-            <span>FRAGMENT · <span class="tier-id mono">${esc(fragment.id)}</span></span>
+            <span>关键句 FRAGMENT${expIcon('fragment')} · <span class="tier-id mono">${esc(fragment.id)}</span></span>
             <span><span class="badge fragment">${esc(zh(FRAGTYPE_CN, fragment.type))}</span> <span class="badge st-${esc(fragment.state)}">${esc(zh(STATE_CN, fragment.state))}</span></span>
           </div>
           <div class="tier-body">「${esc(fragment.content)}」</div>
-          <div class="tier-label" style="margin-top:4px"><span>${esc(fragLocText(fragment, position))}</span><span class="mono">checksum ${esc(fragment.checksum).slice(0, 12)}…</span></div>
+          <div class="tier-label" style="margin-top:4px"><span>${esc(fragLocText(fragment, position))}</span><span class="mono">防伪指纹 ${esc(fragment.checksum).slice(0, 12)}…${expIcon('checksum')}</span></div>
         </div>
-        ${connector(`来自 Evidence ${evidence.id}`)}
+        ${connector(`来自原文 ${evidence.id}`)}
         <div class="tier t-evidence">
           <div class="tier-label">
-            <span>EVIDENCE · <span class="tier-id mono">${esc(evidence.id)}</span></span>
+            <span>原文 EVIDENCE${expIcon('evidence')} · <span class="tier-id mono">${esc(evidence.id)}</span></span>
             <span><span class="badge evidence">${esc(zh(SOURCE_CN, evidence.source))}</span> <span class="badge st-${esc(evidence.state)}">${esc(zh(STATE_CN, evidence.state))}</span></span>
           </div>
-          <div class="tier-label" style="margin-top:2px"><span>${fmtTime(evidence.created_at)}</span><span class="mono" data-tip="${esc(evidence.checksum)}">checksum ${esc(evidence.checksum).slice(0, 12)}…</span></div>
+          <div class="tier-label" style="margin-top:2px"><span>${fmtTime(evidence.created_at)}</span><span class="mono" data-tip="${esc(evidence.checksum)}">防伪指纹 ${esc(evidence.checksum).slice(0, 12)}…</span></div>
           ${renderEvidenceText(evidence, fragment, position)}
         </div>
       </div>`;
@@ -247,14 +248,14 @@ function renderChain(trace) {
 
     <div class="chain-root">
       <div class="tier t-signal">
-        <div class="tier-label"><span>SIGNAL · 业务观察（${trace.chain.length} 条证据链）</span></div>
+        <div class="tier-label"><span>信号 SIGNAL · 一条事实（${trace.chain.length} 条出处链）</span></div>
         <div class="tier-body">「${esc(sig.body)}」</div>
         ${(sig.domains || []).length ? `<div class="tier-doms">${domainBadges(sig.domains, sig.primary_domain)}</div>` : ''}
       </div>
     </div>
-    ${connector('支撑 Fragment ↓')}
+    ${connector('支撑它的关键句 ↓')}
     ${branches}
-    <p class="notice">链路完整性：Signal ← ${trace.fragments.length} Fragment ← ${trace.evidences.length} Evidence。Evidence / Fragment 原文不可变，checksum 可在证据库页校验。</p>`;
+    <p class="notice">链路完整：1 条信号 ← ${trace.fragments.length} 句关键句 ← ${trace.evidences.length} 份原文。原文和关键句一经录入不可修改，防伪指纹可在「证据库」页随时校验。</p>`;
 }
 
 /* ---------- 详情 ---------- */

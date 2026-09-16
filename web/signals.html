@@ -140,7 +140,7 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">Signal 工作台</div>
-      <div class="page-sub">状态机即 UI：待核 → 已核 / 无效 → 已归档 —— 协议禁止物理删除（AC-011），一切流转仅状态变更</div>
+      <div class="page-sub">信号 = 从资料里提炼出的一条条事实。在这里核对它们：确认无误（已核）、有误（无效）、办结（归档）。全程只改状态，任何记录都不会被删除。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
@@ -148,15 +148,15 @@
     <!-- 空库引导 -->
     <section id="empty-guide" class="card empty-guide" hidden>
       <div class="eg-icon">◈</div>
-      <h2>还没有任何 Signal</h2>
-      <p>Signal 是事实观察，必须引用 Fragment 并锚定 Object。前往录入台建立第一条 Evidence → Fragment → Signal 链路。</p>
+      <h2>还没有任何信号</h2>
+      <p>信号是从资料里提炼出的一条条事实，必须有原文里的关键句做支撑、并挂到业务对象上。请先到录入台完成「原文 → 划句 → 提炼」三步。</p>
       <a class="btn primary" href="./intake.html">前往录入台</a>
     </section>
 
     <!-- 工具条 -->
     <section class="card" id="toolbar" hidden>
       <div class="tb-row">
-        <label>类型
+        <label>类型<span class="exp-ico" data-exp-key="signal-type">?</span>
           <select id="type-filter">
             <option value="全部">全部</option>
             <option value="observation">观察</option>
@@ -166,7 +166,7 @@
             <option value="action">行动</option>
           </select>
         </label>
-        <label>板块
+        <label>板块<span class="exp-ico" data-exp-key="domain">?</span>
           <select id="domain-filter">
             <option value="全部">全部</option>
           </select>
@@ -190,5 +190,9 @@
   </main>
 
   <script type="module" src="./signals.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

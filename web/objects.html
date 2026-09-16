@@ -82,7 +82,7 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">对象全景 · Object</div>
-      <div class="page-sub">Object 是 Reality Network 的组织中心 —— 信号聚合、时间线投影与事实关系一览</div>
+      <div class="page-sub">业务对象（项目 / 客户 / 部门 / 系统…）的档案页：每个对象汇集了所有关于它的信号、时间线和与其他对象的关系。点左侧任意一个对象查看。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
@@ -91,7 +91,7 @@
       <!-- 左栏：Object 列表 -->
       <div class="col-list">
         <div class="card">
-          <h3>Object 列表 <span id="obj-count" class="num"></span></h3>
+          <h3><span>Object 列表<span class="exp-ico" data-exp-key="object">?</span> <span id="obj-count" class="num"></span></span></h3>
           <div class="filter-row">
             <label for="type-filter" class="notice">类型</label>
             <select id="type-filter">
@@ -120,22 +120,22 @@
       <div class="col-detail">
         <div class="card" id="obj-detail">
           <h3>对象详情</h3>
-          <p class="notice" id="detail-placeholder">从左侧选择一个 Object，查看其信号聚合与时间线投影。</p>
+          <p class="notice" id="detail-placeholder">从左侧选择一个对象，这里会显示它的档案、相关信号和动态时间线。</p>
           <div id="detail-body" hidden></div>
         </div>
 
         <div class="card" id="obj-timeline" hidden>
-          <h3>Timeline 投影 <span class="notice" style="text-transform:none;letter-spacing:0">（由 Signal 查询生成，不可独立写入 · AC-014）</span></h3>
+          <h3><span>Timeline 投影<span class="exp-ico" data-exp-key="timeline">?</span> <span class="notice" style="text-transform:none;letter-spacing:0">（由信号自动生成的时间线，只读不可改）</span></span></h3>
           <div id="timeline-body"></div>
         </div>
 
         <div class="card" id="obj-signals" hidden>
-          <h3>关联 Signal <span id="sig-count" class="num"></span></h3>
+          <h3><span>关联 Signal <span id="sig-count" class="num"></span></span></h3>
           <div id="signals-body"></div>
         </div>
 
         <div class="card" id="obj-relations" hidden>
-          <h3>事实关系 Relation <span id="rel-count" class="num"></span></h3>
+          <h3><span>事实关系 Relation<span class="exp-ico" data-exp-key="relation">?</span> <span id="rel-count" class="num"></span></span></h3>
           <div id="relations-body"></div>
         </div>
       </div>
@@ -143,5 +143,9 @@
   </main>
 
   <script type="module" src="./objects.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

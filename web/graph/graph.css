@@ -1147,3 +1147,10 @@
 .bgo-cfgmodal-mask[hidden] {
   display: none !important;
 }
+
+/* ---------- 术语解释图标（继承 styles.css 的 .exp-ico，侧栏内收窄气泡） ---------- */
+.bgo .exp-ico { background: transparent; }
+.bgo-top .exp-ico { margin-left: 2px; align-self: center; }
+.bgo-filters .exp-ico:hover::after,
+.bgo-inspector .exp-ico:hover::after,
+.bgo-legend .exp-ico:hover::after { max-width: 210px; }

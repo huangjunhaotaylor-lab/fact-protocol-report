@@ -22,7 +22,7 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">证据库 · Evidence</div>
-      <div class="page-sub">原始证据与 Fragment 定位叠加 —— 原文不可变，checksum 可校验</div>
+      <div class="page-sub">所有原始资料的存档库。原文一旦录入就不可修改，每条都有防伪指纹（checksum）可随时验证没被动过。点左侧任意一条，查看原文和从中划出的关键句。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
@@ -31,7 +31,7 @@
       <!-- 左栏：Evidence 列表 -->
       <div class="col-list">
         <div class="card">
-          <h3>Evidence 列表 <span id="ev-count" class="num"></span></h3>
+          <h3><span>Evidence 列表<span class="exp-ico" data-exp-key="evidence">?</span> <span id="ev-count" class="num"></span></span></h3>
           <div id="ev-list"></div>
         </div>
       </div>
@@ -40,7 +40,7 @@
       <div class="col-detail">
         <div class="card" id="ev-detail">
           <h3>详情</h3>
-          <p class="notice" id="detail-placeholder">从左侧选择一条 Evidence 查看原文与 Fragment 定位。</p>
+          <p class="notice" id="detail-placeholder">从左侧选择一条资料，查看原文、划出的关键句和防伪指纹校验。</p>
           <div id="detail-body" hidden></div>
         </div>
       </div>
@@ -48,5 +48,9 @@
   </main>
 
   <script type="module" src="./evidence.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

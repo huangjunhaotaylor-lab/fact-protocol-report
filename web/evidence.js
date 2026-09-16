@@ -11,6 +11,7 @@
 
 import { evidences, fragments, signals, ApiError } from './api.js';
 import { domainBadges } from './domain-badges.js';
+import { expIcon } from './explain.js';
 
 /* Fragment 高亮配色（每片一色，低饱和冷色 tint） */
 const HL_PALETTE = [
@@ -67,7 +68,7 @@ function renderList() {
   document.getElementById('ev-count').textContent = `共 ${evList.length} 条`;
   const listEl = document.getElementById('ev-list');
   if (!evList.length) {
-    listEl.innerHTML = '<p class="notice">暂无 Evidence。可通过 POST /api/evidences 录入第一条原始证据。</p>';
+    listEl.innerHTML = '<p class="notice">还没有任何资料存档。请到「录入台」录入第一条原文。</p>';
     return;
   }
   listEl.innerHTML = evList
@@ -81,7 +82,7 @@ function renderList() {
       <div class="ev-foot">
         <span>${fmtTime(ev.created_at)}</span>
         <span>
-          <span class="ck-dot" data-tip="checksum: ${esc(ev.checksum)}"></span>
+          <span class="ck-dot" data-tip="防伪指纹 checksum：${esc(ev.checksum)}&#10;原文被改一个字，这串编码就对不上"></span>
           <span class="badge st-${esc(ev.state)}">${esc(zh(STATE_CN, ev.state))}</span>
         </span>
       </div>
@@ -178,10 +179,10 @@ async function select(id) {
     const metaRows = [
       ['来源', `<span class="badge evidence">${esc(zh(SOURCE_CN, ev.source))}</span>`],
       ['创建时间', fmtTime(ev.created_at)],
-      ['checksum', `<span class="mono">${esc(ev.checksum)}</span>`],
-      ['版本', ev.version ?? '—'],
-      ['证据链', ev.chain_id ?? '—'],
-      ['来源系统 ID', ev.source_id ?? '—'],
+      ['checksum' + expIcon('checksum'), `<span class="mono">${esc(ev.checksum)}</span>`],
+      ['版本' + expIcon('intake-version'), ev.version ?? '—'],
+      ['证据链' + expIcon('intake-chain-id'), ev.chain_id ?? '—'],
+      ['来源系统 ID' + expIcon('intake-source-id'), ev.source_id ?? '—'],
       ['创建者', ev.creator ?? '—'],
     ]
       .map(([k, v]) => `<div><span class="mk">${k}：</span><span class="mv">${v}</span></div>`)
@@ -219,12 +220,12 @@ async function select(id) {
         <span class="badge st-${esc(ev.state)}" id="d-state">${esc(zh(STATE_CN, ev.state))}</span>
         <span class="verify-result" id="verify-result"></span>
         <div class="detail-actions">
-          <button class="btn small" id="btn-verify">校验 checksum</button>
-          <button class="btn small" id="btn-archive" ${ev.state === 'Archived' ? 'disabled' : ''}>归档</button>
+          <button class="btn small" id="btn-verify" data-tip="重新计算防伪指纹并和存档比对：一致说明原文没被动过">校验 checksum</button>
+          <button class="btn small" id="btn-archive" ${ev.state === 'Archived' ? 'disabled' : ''} data-tip="封存这条资料（只改状态，不删除）">归档</button>
         </div>
       </div>
       <div class="meta-grid">${metaRows}</div>
-      <h3 style="margin:14px 0 6px">原文（${frags.length} 个 Fragment 定位叠加）</h3>
+      <h3 style="margin:14px 0 6px">原文（${frags.length} 个划出的片段高亮叠加${expIcon('fragment')}）</h3>
       <div class="evidence-text">${renderHighlightedText(ev, located)}</div>
       ${
         unlocated.length
@@ -233,8 +234,8 @@ async function select(id) {
               .join('、')}</p>`
           : ''
       }
-      <h3 style="margin:14px 0 4px">Fragment 清单</h3>
-      ${chips || '<p class="notice">该 Evidence 尚未切分 Fragment。</p>'}
+      <h3 style="margin:14px 0 4px">Fragment 清单${expIcon('fragment')}</h3>
+      ${chips || '<p class="notice">这份资料还没有划出任何片段，可到录入台第二步划选。</p>'}
     `;
 
     placeholder.hidden = true;
@@ -255,10 +256,10 @@ async function verifyChecksum(id) {
   try {
     const res = await evidences.verify(id);
     if (res.integrity) {
-      resultEl.textContent = '✓ checksum 校验通过，原文完整';
+      resultEl.textContent = '✓ 防伪指纹校验通过，原文完整未被改动';
       resultEl.classList.add('ok');
     } else {
-      resultEl.textContent = '✗ checksum 校验失败，原文可能被篡改';
+      resultEl.textContent = '✗ 防伪指纹对不上，原文可能被篡改';
       resultEl.classList.add('bad');
     }
   } catch (e) {
@@ -268,7 +269,7 @@ async function verifyChecksum(id) {
 }
 
 async function archiveEvidence(id) {
-  if (!window.confirm(`确认归档 ${id}？\n归档为状态流转（已创建 → 已归档），记录不会物理删除。`)) return;
+  if (!window.confirm(`确认归档 ${id}？\n归档只是把它标记为「已归档」封存起来，记录本身不会删除，随时能再查到。`)) return;
   try {
     const updated = await evidences.archive(id);
     const item = evList.find((e) => e.id === id);

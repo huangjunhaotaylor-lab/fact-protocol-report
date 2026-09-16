@@ -12,6 +12,7 @@
 
 import { objects, relations, ApiError } from './api.js';
 import { domainBadges } from './domain-badges.js';
+import { expIcon } from './explain.js';
 
 const STATE_COLORS = {
   Captured: '#b7791f',
@@ -128,7 +129,7 @@ function renderDetail(o) {
   const metaRows = [
     ['创建时间', fmtTime(o.created_at)],
     ['更新时间', fmtTime(o.updated_at)],
-    ['身份标识', o.identity ? `<span class="mono">${esc(o.identity)}</span>` : '—'],
+    ['身份标识' + expIcon('object'), o.identity ? `<span class="mono">${esc(o.identity)}</span>` : '—'],
     ['别名', (o.aliases || []).length ? esc(o.aliases.join('、')) : '—'],
     [
       '属性',
@@ -157,9 +158,9 @@ function renderDetail(o) {
       <span class="badge object">${esc(zh(OBJTYPE_CN, o.type))}</span>
       <span class="badge st-${esc(o.state)}" id="d-state">${esc(zh(STATE_CN, o.state))}</span>
       <div class="detail-actions">
-        <button class="btn small" id="btn-activate" ${canActivate ? '' : 'disabled'} data-tip="已创建 → 活跃">激活</button>
-        <button class="btn small" id="btn-merge" ${canMerge ? '' : 'disabled'} data-tip="活跃 → 已合并&#10;合并来源保留在 attributes._merged_into">合并…</button>
-        <button class="btn small" id="btn-archive" ${canArchive ? '' : 'disabled'} data-tip="活跃 → 已归档&#10;归档不等于删除">归档</button>
+        <button class="btn small" id="btn-activate" ${canActivate ? '' : 'disabled'} data-tip="新建的对象先「激活」，表示正式启用这份档案">激活</button>
+        <button class="btn small" id="btn-merge" ${canMerge ? '' : 'disabled'} data-tip="两个对象其实是同一个？合并成一个，原对象保留去向记录、不删除">合并…</button>
+        <button class="btn small" id="btn-archive" ${canArchive ? '' : 'disabled'} data-tip="封存这份档案（只改状态，不删除）">归档</button>
       </div>
     </div>
     <div class="meta-grid">${metaRows}</div>`;
@@ -174,7 +175,7 @@ function renderTimeline(data) {
   const body = document.getElementById('timeline-body');
   const sigs = (data.signals || []).slice();
   if (!sigs.length) {
-    body.innerHTML = '<p class="notice">该 Object 尚无 Signal，无法生成 Timeline 投影。</p>';
+    body.innerHTML = '<p class="notice">这个对象还没有挂上任何信号，暂无时间线可看。去录入台提炼信号并挂到它上面。</p>';
     return;
   }
   sigs.sort((a, b) => String(sigTime(a)).localeCompare(String(sigTime(b))));
@@ -224,7 +225,7 @@ function renderTimeline(data) {
         <text x="${W - PAD}" y="${AXIS_Y + 18}" font-size="11" fill="var(--muted)" text-anchor="end" class="mono">${esc(fmtTime(data.timeline.end))}</text>
       </svg>
     </div>
-    <div class="tl-range"><span>${sigs.length} 个 Signal · 点色 = Signal 状态（点击圆点跳转追溯）</span><span>${legend}</span></div>`;
+    <div class="tl-range"><span>${sigs.length} 条信号 · 圆点颜色 = 核对状态（点击圆点跳转追溯出处）</span><span>${legend}</span></div>`;
 
   body.querySelectorAll('.tl-dot').forEach((g) => {
     g.addEventListener('click', () => {
@@ -238,17 +239,17 @@ function renderSignals(sigs) {
   document.getElementById('sig-count').textContent = `共 ${sigs.length} 条`;
   const body = document.getElementById('signals-body');
   if (!sigs.length) {
-    body.innerHTML = '<p class="notice">该 Object 尚未锚定任何 Signal。</p>';
+    body.innerHTML = '<p class="notice">这个对象还没有挂上任何信号。</p>';
     return;
   }
   const sorted = sigs
     .slice()
     .sort((a, b) => String(b.captured_at).localeCompare(String(a.captured_at)));
   body.innerHTML = `<table class="tbl">
-    <thead><tr><th>ID</th><th>观察内容</th><th>类型</th><th>板块</th><th>状态</th><th>置信度</th><th>捕获时间</th></tr></thead>
+    <thead><tr><th>ID</th><th>观察内容</th><th>类型${expIcon('signal-type')}</th><th>板块${expIcon('domain')}</th><th>状态${expIcon('state-machine')}</th><th>置信度${expIcon('confidence')}</th><th>捕获时间</th></tr></thead>
     <tbody>${sorted
       .map(
-        (s) => `<tr class="row-link" data-id="${esc(s.id)}" data-tip="点击前往追溯页查看证据链">
+        (s) => `<tr class="row-link" data-id="${esc(s.id)}" data-tip="点击前往追溯页，看这条信号的完整出处">
         <td class="mono">${esc(s.id)}</td>
         <td>${esc(s.body.length > 40 ? s.body.slice(0, 40) + '…' : s.body)}</td>
         <td><span class="badge signal">${esc(zh(SIGTYPE_CN, s.type))}</span></td>
@@ -272,10 +273,10 @@ async function renderRelations(rels) {
   document.getElementById('rel-count').textContent = `共 ${rels.length} 条`;
   const body = document.getElementById('relations-body');
   if (!rels.length) {
-    body.innerHTML = '<p class="notice">该 Object 暂无事实关系记录。</p>';
+    body.innerHTML = '<p class="notice">这个对象和其他对象之间还没有建立事实关系。</p>';
     return;
   }
-  // AC-013：逐条取 derived_from Signal 摘要
+  // 逐条取关系来源信号的摘要（每条关系都必须出自某条信号）
   const rows = await Promise.all(
     rels.map(async (r) => {
       let sigText = r.derived_from;
@@ -293,7 +294,7 @@ async function renderRelations(rels) {
         <span class="rel-type">${esc(r.type)}</span>
         <span class="rel-arrow">→</span>
         <span><span class="badge object">${esc(tgt)}</span></span>
-        <span class="rel-src">derived_from <a href="./trace.html?id=${encodeURIComponent(r.derived_from)}" data-tip="AC-013：追溯到来源 Signal">${esc(sigText)}</a> · 置信度 <span class="num">${fmtConf(r.confidence)}</span></span>
+        <span class="rel-src">出自 <a href="./trace.html?id=${encodeURIComponent(r.derived_from)}" data-tip="追溯到这条关系的来源信号：看它出自哪句话、哪份原文">${esc(sigText)}</a> · 置信度${expIcon('confidence')} <span class="num">${fmtConf(r.confidence)}</span></span>
       </div>`;
     }),
   );
@@ -345,17 +346,17 @@ async function select(id) {
     document.getElementById('btn-archive').addEventListener('click', () =>
       doAction(
         () => objects.archive(id),
-        `确认归档 ${id}？\n归档为状态流转（活跃 → 已归档），记录不会物理删除。`,
+        `确认归档 ${id}？\n归档只是把这份档案标记为「已归档」封存起来（活跃 → 已归档），记录本身不会删除。`,
       ),
     );
     document.getElementById('btn-merge').addEventListener('click', () => {
       const target = window.prompt(
-        `将 ${id} 合并到哪个 Object？\n请输入目标 Object ID（合并后本对象进入「已合并」，名称并入目标别名）：`,
+        `将 ${id} 合并到哪个对象？\n请输入目标对象 ID（合并后本对象标记为「已合并」，名称并入目标对象的别名）：`,
       );
       if (!target) return;
       doAction(
         () => objects.merge(id, target.trim()),
-        `确认将 ${id} 合并到 ${target.trim()}？\n合并不可逆：本对象状态变为「已合并」，合并来源保留在 attributes._merged_into。`,
+        `确认将 ${id} 合并到 ${target.trim()}？\n合并不可逆：本对象状态变为「已合并」，系统会保留它合并去了哪里的记录。`,
       );
     });
 

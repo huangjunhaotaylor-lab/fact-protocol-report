@@ -18,6 +18,7 @@
    ============================================================ */
 
 import { GraphEngine, DOMAIN_COLORS } from './engine.js';
+import { expIcon } from '../explain.js';
 
 /* ------------------------------------------------------------
    1. 工具与 API
@@ -404,8 +405,8 @@ function renderInspectorPlaceholder() {
   body.textContent = '';
   $('inspectorTitle').textContent = '检查器';
   const ph = el('div', 'bi-placeholder');
-  ph.append(document.createTextNode('点击画布中的节点查看详情'), el('br'));
-  ph.append(el('small', null, '右键节点打开操作菜单 · 双击展开邻居'));
+  ph.append(document.createTextNode('点一下画布上的圆点，这里会显示它的档案'), el('br'));
+  ph.append(el('small', null, '右键圆点打开操作菜单 · 双击展开和它相连的内容'));
   body.append(ph);
 }
 
@@ -455,15 +456,28 @@ const PROP_FIELDS = {
   ],
 };
 
-function propRow(k, v) {
+function propRow(k, v, expKey) {
   const tr = el('tr');
-  tr.append(el('td', 'pk', k));
+  const pk = el('td', 'pk', k);
+  const ek = expKey || PROP_EXP[k];
+  if (ek) pk.insertAdjacentHTML('beforeend', expIcon(ek));
+  tr.append(pk);
   const td = el('td', 'pv');
   td.textContent = String(v);
   if (String(v).length > 40) td.title = String(v);
   tr.append(td);
   return tr;
 }
+
+/** 属性表中需要 hover 解释的字段（label → 术语字典 key） */
+const PROP_EXP = {
+  '状态': 'state-machine',
+  '置信度': 'confidence',
+  'Checksum': 'checksum',
+  '板块': 'domain',
+  '主线板块': 'primary-domain',
+  '派生自 Signal': 'relation',
+};
 
 function renderInspector(nd) {
   const body = $('inspectorBody');
@@ -482,6 +496,7 @@ function renderInspector(nd) {
   if (nd.kind === 'Evidence' || nd.kind === 'Fragment') {
     const row = el('div', 'bi-verify');
     const btn = el('button', 'btn small', '校验 checksum');
+    btn.setAttribute('data-tip', '重新计算防伪指纹并和存档比对：一致说明原文没被动过');
     const res = el('span', 'bi-verify-res');
     btn.addEventListener('click', async () => {
       btn.disabled = true;
@@ -510,7 +525,9 @@ function renderInspector(nd) {
   // Signal：confidence 条
   if (nd.kind === 'Signal' && typeof nd.confidence === 'number') {
     const box = el('div', 'bi-conf');
-    box.append(el('div', 'bf-title', '置信度'));
+    const confTitle = el('div', 'bf-title', '置信度');
+    confTitle.insertAdjacentHTML('beforeend', expIcon('confidence'));
+    box.append(confTitle);
     const barWrap = el('div', 'confbar');
     const fill = el('div', 'confbar-fill');
     fill.style.width = `${Math.round(Math.max(0, Math.min(1, nd.confidence)) * 100)}%`;
@@ -558,7 +575,9 @@ function renderInspector(nd) {
       ['location', '位置'], ['meeting', '会议'], ['document', '文档'], ['system', '系统'],
     ];
     const ctxBox = el('div', 'bi-ctx');
-    ctxBox.append(el('div', 'bf-title', 'Context'));
+    const ctxTitle = el('div', 'bf-title', 'Context 发生环境');
+    ctxTitle.insertAdjacentHTML('beforeend', expIcon('signal-context'));
+    ctxBox.append(ctxTitle);
     const ctxTable = el('table', 'bi-props');
     let has = false;
     for (const [k, label] of ctxFields) {

@@ -90,16 +90,16 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">板块管理 · Domains</div>
-      <div class="page-sub">板块关键词字典维护 · 存量重新分类 · 未分类信号归口 —— 分类器只认关键词命中，人工纠正永久优先</div>
+      <div class="page-sub">业务板块的分类规则中心：系统按关键词自动给信号分板块。这里可以调词、重新分类、处理没分清的信号。人工纠正过的永远优先，不会被自动分类覆盖。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
 
     <!-- 工具条：重新分类 -->
     <section class="card">
-      <h3>存量分类</h3>
+      <h3><span>存量重新分类<span class="exp-ico" data-exp-key="reclassify">?</span></span></h3>
       <div class="dm-toolbar">
-        <span class="dm-note">重跑分类器回填全部信号的板块字段；人工纠正过（domain_manual）的信号跳过。操作幂等。</span>
+        <span class="dm-note">拿当前关键词把所有信号重新分一遍板块；人工手动改过的信号不会被覆盖。可重复执行，结果一样。</span>
         <button class="btn" id="btn-reclassify" data-tip="对全部未人工纠正的信号重跑板块分类器，并重算 Object 传导">重新分类</button>
       </div>
       <div id="reclassify-result" hidden></div>
@@ -107,17 +107,21 @@
 
     <!-- 板块字典卡片 -->
     <section>
-      <h3 style="margin:0 0 10px">板块字典 <span class="notice" style="text-transform:none;letter-spacing:0">（chips × 删除 · 输入框回车添加 · 保存后分类器立即生效）</span></h3>
+      <h3 style="margin:0 0 10px"><span>板块字典<span class="exp-ico" data-exp-key="domain-keywords">?</span> <span class="notice" style="text-transform:none;letter-spacing:0">（点 × 删词 · 输入框回车加词 · 保存后自动分类立即生效）</span></span></h3>
       <div id="domain-cards"><p class="notice">加载中…</p></div>
     </section>
 
     <!-- 未分类信号队列 -->
     <section class="card" id="unclassified-card" style="margin-top:14px">
-      <h3>未分类信号队列 <span id="unclassified-count" class="num"></span></h3>
+      <h3><span>未分类信号队列<span class="exp-ico" data-exp-key="unclassified">?</span> <span id="unclassified-count" class="num"></span></span></h3>
       <div id="unclassified-list"><p class="notice">加载中…</p></div>
     </section>
   </main>
 
   <script type="module" src="./domains.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

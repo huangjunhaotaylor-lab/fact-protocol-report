@@ -162,14 +162,14 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">录入台 · Intake</div>
-      <div class="page-sub">唯一入口：Evidence → Fragment → Signal → Object Anchor。禁止跳过链路，禁止混入判断。</div>
+      <div class="page-sub">把新资料录进系统：粘贴原文或上传文件 → 划出关键句 → 提炼成事实信号。系统会自动识别所属板块，录完可到 Signal 工作台核对。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
 
     <!-- 当前工作链 -->
     <section class="card">
-      <h3>当前工作链</h3>
+      <h3><span>当前工作链<span class="exp-ico" data-exp-key="trace-chain">?</span></span></h3>
       <div class="chain-strip" id="chain-strip"></div>
     </section>
 
@@ -177,17 +177,17 @@
     <section class="card" id="step1">
       <div class="step-head">
         <span class="step-num s1">1</span>
-        <span class="step-title">录入 Evidence</span>
-        <span class="step-hint">保存原始证据原文 · 创建后不可改写 · 自动计算 checksum</span>
+        <span class="step-title">录入原文（Evidence<span class="exp-ico" data-exp-key="evidence">?</span>）</span>
+        <span class="step-hint">原样保存，一字不改 · 存进去就不能再编辑 · 自动生成防伪指纹<span class="exp-ico" data-exp-key="checksum">?</span></span>
       </div>
       <form id="ev-form">
         <div class="f-grid">
           <div>
-            <label class="f-label" for="ev-source">来源 source <span class="req">*</span></label>
+            <label class="f-label" for="ev-source" data-exp-key="intake-source">来源 source <span class="req">*</span></label>
             <select class="f-select" id="ev-source" required></select>
           </div>
           <div>
-            <label class="f-label" for="ev-creator">记录人 creator</label>
+            <label class="f-label" for="ev-creator" data-exp-key="intake-creator">记录人 creator</label>
             <input class="f-input" id="ev-creator" placeholder="选填" />
           </div>
         </div>
@@ -202,22 +202,22 @@
           <summary>可选字段：source_id / version / chain_id</summary>
           <div class="f-grid">
             <div>
-              <label class="f-label" for="ev-source-id">source_id</label>
+              <label class="f-label" for="ev-source-id" data-exp-key="intake-source-id">source_id</label>
               <input class="f-input" id="ev-source-id" placeholder="外部系统原始 ID" />
             </div>
             <div>
-              <label class="f-label" for="ev-version">version</label>
+              <label class="f-label" for="ev-version" data-exp-key="intake-version">version</label>
               <input class="f-input num" id="ev-version" type="number" min="1" step="1" placeholder="证据版本号" />
             </div>
             <div>
-              <label class="f-label" for="ev-chain-id">chain_id</label>
+              <label class="f-label" for="ev-chain-id" data-exp-key="intake-chain-id">chain_id</label>
               <input class="f-input" id="ev-chain-id" placeholder="同一证据链标识" />
             </div>
           </div>
         </details>
         <div class="f-foot">
           <button class="btn primary" type="submit" id="ev-submit">保存 Evidence 原文</button>
-          <span class="notice">不可变性：content 落库即冻结，协议不提供修改端点</span>
+          <span class="notice">保存后原文即冻结，系统不提供修改入口——录错了只能作废重录，保证底稿可信</span>
           <span class="f-count num" id="ev-count">0 字</span>
         </div>
       </form>
@@ -228,8 +228,8 @@
     <section class="card" id="step2">
       <div class="step-head">
         <span class="step-num s2">2</span>
-        <span class="step-title">从原文截取 Fragment</span>
-        <span class="step-hint">片段必须来自 Evidence 原文 · 划选文字自动带入内容与偏移</span>
+        <span class="step-title">从原文划出关键句（Fragment<span class="exp-ico" data-exp-key="fragment">?</span>）</span>
+        <span class="step-hint">像用荧光笔划重点 · 直接在原文上划选，位置自动记录</span>
       </div>
 
       <div class="f-grid">
@@ -248,48 +248,48 @@
       <form id="fr-form" hidden>
         <div class="f-grid">
           <div>
-            <label class="f-label" for="fr-type">类型 type <span class="req">*</span></label>
+            <label class="f-label" for="fr-type" data-exp-key="frag-type">类型 type <span class="req">*</span></label>
             <select class="f-select" id="fr-type" required></select>
           </div>
           <div>
-            <label class="f-label" for="fr-speaker">说话人 speaker</label>
+            <label class="f-label" for="fr-speaker" data-exp-key="frag-speaker">说话人 speaker</label>
             <input class="f-input" id="fr-speaker" placeholder="选填" />
           </div>
           <div>
-            <label class="f-label" for="fr-start">start_offset</label>
+            <label class="f-label" for="fr-start" data-exp-key="frag-offset">start_offset</label>
             <input class="f-input num" id="fr-start" readonly placeholder="划选后自动填入" />
           </div>
           <div>
-            <label class="f-label" for="fr-end">end_offset</label>
+            <label class="f-label" for="fr-end" data-exp-key="frag-offset">end_offset</label>
             <input class="f-input num" id="fr-end" readonly placeholder="划选后自动填入" />
           </div>
         </div>
-        <label class="f-label" for="fr-content">片段内容 content <span class="req">*</span>（必须是原文子串，服务端会校验）</label>
+        <label class="f-label" for="fr-content">片段内容 content <span class="req">*</span>（必须是原文里的一字不差的句子，系统会校验）</label>
         <textarea class="f-textarea" id="fr-content" required style="min-height:60px"></textarea>
         <details class="opt">
           <summary>可选定位：timestamp / page / section</summary>
           <div class="f-grid">
             <div>
-              <label class="f-label" for="fr-ts-start">timestamp_start</label>
+              <label class="f-label" for="fr-ts-start" data-exp-key="frag-loc">timestamp_start</label>
               <input class="f-input num" id="fr-ts-start" placeholder="如 00:15:32" />
             </div>
             <div>
-              <label class="f-label" for="fr-ts-end">timestamp_end</label>
+              <label class="f-label" for="fr-ts-end" data-exp-key="frag-loc">timestamp_end</label>
               <input class="f-input num" id="fr-ts-end" placeholder="如 00:15:40" />
             </div>
             <div>
-              <label class="f-label" for="fr-page">page</label>
+              <label class="f-label" for="fr-page" data-exp-key="frag-loc">page</label>
               <input class="f-input num" id="fr-page" type="number" min="1" step="1" />
             </div>
             <div>
-              <label class="f-label" for="fr-section">section</label>
+              <label class="f-label" for="fr-section" data-exp-key="frag-loc">section</label>
               <input class="f-input" id="fr-section" placeholder="章节名" />
             </div>
           </div>
         </details>
         <div class="f-foot">
           <button class="btn primary" type="submit" id="fr-submit">创建 Fragment</button>
-          <span class="notice">一个 Evidence 可截取多个 Fragment，一个 Fragment 可支撑多个 Signal</span>
+          <span class="notice">一份原文可以划出多个片段，一个片段可以支撑多条信号</span>
         </div>
       </form>
       <div id="fr-result"></div>
@@ -304,43 +304,43 @@
     <section class="card" id="step3">
       <div class="step-head">
         <span class="step-num s3">3</span>
-        <span class="step-title">创建 Signal 并锚定 Object</span>
-        <span class="step-hint">事实观察 · 至少 1 个 Fragment · 至少 1 个 Object 锚点</span>
+        <span class="step-title">提炼事实信号（Signal）并挂到对象上</span>
+        <span class="step-hint">一条信号 = 一句大白话事实 · 至少有 1 个划出的片段做支撑 · 至少挂 1 个业务对象</span>
       </div>
 
       <form id="sig-form">
-        <label class="f-label">支撑 Fragment <span class="req">*</span>（在第二步列表中点「选用」加入）</label>
+        <label class="f-label">支撑片段 <span class="req">*</span>（在第二步列表中点「选用」加入）</label>
         <div class="tray" id="sig-tray"><span class="notice" id="tray-empty">尚未选用 Fragment。</span></div>
 
-        <label class="f-label" for="sig-body">观察 body <span class="req">*</span>（主体 + 当前行为 / 当前状态 / 已发生事实）</label>
+        <label class="f-label" for="sig-body" data-exp-key="signal-body">观察 body <span class="req">*</span>（主体 + 当前行为 / 当前状态 / 已发生事实）</label>
         <textarea class="f-textarea" id="sig-body" required style="min-height:60px" placeholder="例：仓库目前使用 Excel 进行盘点。"></textarea>
         <div class="body-warn" id="sig-body-warn"></div>
         <div class="domain-preview" id="sig-domain-preview" hidden></div>
 
         <div class="f-grid">
           <div>
-            <label class="f-label" for="sig-type">类型 type <span class="req">*</span></label>
+            <label class="f-label" for="sig-type" data-exp-key="signal-type">类型 type <span class="req">*</span></label>
             <select class="f-select" id="sig-type" required></select>
           </div>
           <div class="span2">
-            <label class="f-label" for="sig-conf">confidence（抽取置信度，非业务重要性）<span class="req">*</span></label>
+            <label class="f-label" for="sig-conf" data-exp-key="confidence">confidence（来源可靠程度，非业务重要性）<span class="req">*</span></label>
             <div class="conf-row">
               <input type="range" id="sig-conf" min="0" max="1" step="0.01" value="0.9" />
               <span class="conf-val num" id="sig-conf-val">0.90</span>
             </div>
           </div>
           <div>
-            <label class="f-label" for="sig-actors">相关者 actors</label>
+            <label class="f-label" for="sig-actors" data-exp-key="signal-actors">相关者 actors</label>
             <input class="f-input" id="sig-actors" placeholder="多人用逗号分隔" />
           </div>
           <div>
-            <label class="f-label" for="sig-occurred">发生时间 occurred_at</label>
+            <label class="f-label" for="sig-occurred" data-exp-key="signal-occurred">发生时间 occurred_at</label>
             <input class="f-input" id="sig-occurred" type="datetime-local" />
           </div>
         </div>
 
         <details class="opt">
-          <summary>Context 发生环境（channel / source / organization / location / meeting / document / system）</summary>
+          <summary data-exp-key="signal-context">Context 发生环境（channel / source / organization / location / meeting / document / system）</summary>
           <div class="f-grid">
             <div><label class="f-label" for="ctx-channel">channel</label><input class="f-input" id="ctx-channel" placeholder="如 meeting" /></div>
             <div><label class="f-label" for="ctx-source">source</label><input class="f-input" id="ctx-source" /></div>
@@ -352,17 +352,17 @@
           </div>
         </details>
 
-        <label class="f-label">锚定 Object <span class="req">*</span>（勾选已有对象，或就地创建新对象）</label>
+        <label class="f-label" data-exp-key="anchor">锚定 Object（挂到业务对象上）<span class="req">*</span>（勾选已有对象，或就地创建新对象）</label>
         <div class="anchor-box" id="anchor-box"><p class="notice" style="margin:4px 0">加载中…</p></div>
         <div class="anchor-new">
           <select class="f-select" id="obj-type"></select>
-          <input class="f-input" id="obj-name" placeholder="新 Object 名称，如：仓库盘点流程" />
+          <input class="f-input" id="obj-name" placeholder="新对象名称，如：仓库盘点流程" />
           <button class="btn small" type="button" id="obj-create">创建并选用</button>
         </div>
 
         <div class="f-foot" style="margin-top:12px">
-          <button class="btn primary" type="submit" id="sig-submit">创建 Signal（状态 Captured）</button>
-          <span class="notice">创建后可在 Signal 工作台确认 Verified / 标记 Invalid</span>
+          <button class="btn primary" type="submit" id="sig-submit">创建 Signal（初始为「待核」）</button>
+          <span class="notice">创建后可在 Signal 工作台核对：确认无误（已核）/ 有误（无效）</span>
         </div>
       </form>
       <div id="sig-result"></div>
@@ -376,5 +376,9 @@
   </main>
 
   <script type="module" src="./intake.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

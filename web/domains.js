@@ -164,7 +164,7 @@ function bindReclassify() {
   $('btn-reclassify').addEventListener('click', async () => {
     if (
       !window.confirm(
-        '确认重新分类全部信号？\n将对所有未人工纠正的信号重跑板块分类器并重算 Object 传导（幂等）。\n人工纠正过（domain_manual）的信号会被跳过，不受影响。',
+        '确认重新分类全部信号？\n将拿当前关键词词表对所有信号重新分一遍板块。\n人工手动纠正过的信号会被跳过、不受影响；重复执行结果一样。',
       )
     ) {
       return;
@@ -220,7 +220,7 @@ function renderUnclassified() {
         <span class="uq-id mono">${esc(s.id)}</span>
         <span class="uq-body">「${esc(brief)}」</span>
         <span class="uq-doms">当前板块：${cur}</span>
-        <select multiple size="${Math.min(Math.max(domainList.length, 3), 7)}" data-tip="按住 ⌘/Ctrl 可多选；第一个选中的板块作为主线">${options}</select>
+        <select multiple size="${Math.min(Math.max(domainList.length, 3), 7)}" data-tip="按住 ⌘/Ctrl 可多选；第一个选中的板块作为主线板块">${options}</select>
         <button class="btn small uq-save" data-id="${esc(s.id)}">保存归口</button>
       </div>`;
     })

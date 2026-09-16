@@ -104,7 +104,7 @@
   <main class="page">
     <header class="page-head">
       <div class="page-title">追溯 · Trace</div>
-      <div class="page-sub">Signal → Fragment → Evidence 全链路反查 —— 任何观察都必须能回到原始证据</div>
+      <div class="page-sub">选一条信号，往回看它的完整出处：出自哪句话 → 哪份原文 → 什么时候进来的。任何结论都必须能回到原文。</div>
     </header>
 
     <div id="error" class="error-box" hidden></div>
@@ -113,7 +113,7 @@
       <!-- 左栏：Signal 列表 -->
       <div class="col-list">
         <div class="card">
-          <h3>Signal 列表 <span id="sig-count" class="num"></span></h3>
+          <h3><span>Signal 列表 <span id="sig-count" class="num"></span></span></h3>
           <div class="filter-row" id="state-filter"></div>
           <div id="sig-list"></div>
         </div>
@@ -122,8 +122,8 @@
       <!-- 右栏：证据链追溯视图 -->
       <div class="col-detail">
         <div class="card" id="trace-detail">
-          <h3>证据链</h3>
-          <p class="notice" id="detail-placeholder">从左侧选择一个 Signal，查看它的完整证据链。</p>
+          <h3><span>证据链<span class="exp-ico" data-exp-key="trace-chain">?</span></span></h3>
+          <p class="notice" id="detail-placeholder">从左侧选择一条信号，这里会展示它的完整出身：信号 → 关键句 → 原文。</p>
           <div id="detail-body" hidden></div>
         </div>
       </div>
@@ -131,5 +131,9 @@
   </main>
 
   <script type="module" src="./trace.js"></script>
+  <script type="module">
+    import { injectExplainers } from './explain.js';
+    injectExplainers();
+  </script>
 </body>
 </html>

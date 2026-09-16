@@ -15,7 +15,7 @@
     <div class="bgo-brand">
       <span class="bgo-logo">◆</span>
       <span class="bgo-name">Business Graph OS</span>
-      <small class="bgo-sub">BSP Reality Layer</small>
+      <small class="bgo-sub">业务关系全景图</small>
     </div>
 
     <div class="bgo-search" role="search">
@@ -25,19 +25,21 @@
         aria-label="图搜索">
     </div>
 
-    <select id="domainSel" class="bgo-domain-sel" aria-label="板块聚焦" title="板块聚焦：域外节点淡化显示">
+    <select id="domainSel" class="bgo-domain-sel" aria-label="板块聚焦" title="只看某个板块：其余内容淡化显示">
       <option value="">全部板块</option>
     </select>
 
     <div class="seg" id="modeSeg" role="tablist" aria-label="模式切换">
-      <button data-mode="explore" class="on" role="tab">探索</button>
-      <button data-mode="judge" role="tab">研判</button>
+      <button data-mode="explore" class="on" role="tab" title="随便逛：搜索、双击展开，看业务对象怎么连">探索</button>
+      <button data-mode="judge" role="tab" title="带着问题看：过滤器 + 时间滑杆，聚焦某类信号或某段时间">研判</button>
     </div>
+    <span class="exp-ico" data-exp-key="graph-mode">?</span>
 
     <div class="seg bgo-layout-seg" id="layoutSeg" role="tablist" aria-label="布局切换">
-      <button data-layout="force" class="on" role="tab">力导向</button>
-      <button data-layout="time" role="tab">时间轴</button>
+      <button data-layout="force" class="on" role="tab" title="像撒开一张网：连线多的点聚到中间，看关系结构">力导向</button>
+      <button data-layout="time" role="tab" title="按时间从左到右排开，看事情发展的先后">时间轴</button>
     </div>
+    <span class="exp-ico" data-exp-key="graph-layout">?</span>
 
     <div class="bgo-scenebox">
       <button class="btn small" id="aiViewBtn" title="对当前视图做 AI 整体解读">✦ AI 解读</button>
@@ -68,7 +70,7 @@
       </div>
 
       <section class="bf-group">
-        <div class="bf-title">节点类型</div>
+        <div class="bf-title" data-exp-key="filter-kind">节点类型</div>
         <label class="bf-check" data-kind="Evidence"><input type="checkbox" checked><span class="dot k-Evidence"></span>证据<span class="bf-count" data-count="Evidence">0</span></label>
         <label class="bf-check" data-kind="Fragment"><input type="checkbox" checked><span class="dot k-Fragment"></span>片段<span class="bf-count" data-count="Fragment">0</span></label>
         <label class="bf-check" data-kind="Signal"><input type="checkbox" checked><span class="dot k-Signal"></span>信号<span class="bf-count" data-count="Signal">0</span></label>
@@ -77,7 +79,7 @@
       </section>
 
       <section class="bf-group">
-        <div class="bf-title">信号状态</div>
+        <div class="bf-title" data-exp-key="filter-state">信号状态</div>
         <div class="bf-chips" id="sigStateChips">
           <button class="chip on" data-state="Captured">待核</button>
           <button class="chip on" data-state="Verified">已核</button>
@@ -87,19 +89,19 @@
       </section>
 
       <section class="bf-group" id="domainGroup" hidden>
-        <div class="bf-title">板块</div>
+        <div class="bf-title" data-exp-key="filter-domain">板块</div>
         <div class="bf-chips" id="domainChips"></div>
       </section>
 
       <section class="bf-group">
-        <div class="bf-title">对象类型</div>
+        <div class="bf-title" data-exp-key="filter-objtype">对象类型</div>
         <select id="objTypeSel" class="bf-select">
           <option value="">全部类型</option>
         </select>
       </section>
 
       <section class="bf-group">
-        <div class="bf-title">节点尺寸</div>
+        <div class="bf-title" data-exp-key="filter-sizing">节点尺寸</div>
         <div class="seg bf-seg" id="sizingSeg">
           <button data-mode="fixed" class="on">固定</button>
           <button data-mode="confidence">置信度</button>
@@ -111,6 +113,7 @@
         <label class="bf-switch">
           <input type="checkbox" id="dimIsolated">
           <span>淡出孤立节点</span>
+          <span class="exp-ico" data-exp-key="filter-isolated">?</span>
         </label>
       </section>
     </aside>
@@ -122,13 +125,13 @@
       <!-- 图例（左下悬浮卡） -->
       <div class="bgo-legend graph-panel" id="legend">
         <div class="gp-title">图例</div>
-        <div class="lg-row"><span class="lg-shape lg-evidence"></span>Evidence 证据</div>
-        <div class="lg-row"><span class="lg-shape lg-fragment"></span>Fragment 片段</div>
-        <div class="lg-row"><span class="lg-shape lg-signal"></span>Signal 信号</div>
-        <div class="lg-row"><span class="lg-shape lg-object"></span>Object 对象</div>
-        <div class="lg-row"><span class="lg-shape lg-relation"></span>Relation 关系</div>
+        <div class="lg-row"><span class="lg-shape lg-evidence"></span>Evidence 证据<span class="exp-ico" data-exp-key="evidence">?</span></div>
+        <div class="lg-row"><span class="lg-shape lg-fragment"></span>Fragment 片段<span class="exp-ico" data-exp-key="fragment">?</span></div>
+        <div class="lg-row"><span class="lg-shape lg-signal"></span>Signal 信号<span class="exp-ico" data-exp-key="state-machine">?</span></div>
+        <div class="lg-row"><span class="lg-shape lg-object"></span>Object 对象<span class="exp-ico" data-exp-key="object">?</span></div>
+        <div class="lg-row"><span class="lg-shape lg-relation"></span>Relation 关系<span class="exp-ico" data-exp-key="relation">?</span></div>
         <div class="lg-sep"></div>
-        <div class="lg-row"><span class="lg-edge solid"></span>支撑 / 锚定</div>
+        <div class="lg-row"><span class="lg-edge solid"></span>支撑 / 锚定<span class="exp-ico" data-exp-key="anchor">?</span></div>
         <div class="lg-row"><span class="lg-edge dashed"></span>出处 / 同链</div>
         <div class="lg-row"><span class="lg-edge dotted"></span>合并</div>
         <div id="legendDomains"></div>
@@ -139,7 +142,7 @@
         <div class="be-card">
           <div class="be-logo">◆</div>
           <div class="be-title">从搜索开始你的探索</div>
-          <div class="be-hint">搜索命中节点落入画布，双击逐层展开它的世界</div>
+          <div class="be-hint">搜到的内容会落到画布上；双击一个圆点，就能逐层展开它的来龙去脉</div>
           <div class="be-examples" id="emptyExamples">
             <button class="be-chip" data-q="信号 状态 待核">信号 状态 待核</button>
             <button class="be-chip" data-q="对象 类型 客户">对象 类型 客户</button>
@@ -168,7 +171,7 @@
         <button class="bf-collapse" id="inspectorCollapse" title="收起面板">»</button>
       </div>
       <div class="bi-body" id="inspectorBody">
-        <div class="bi-placeholder">点击画布中的节点查看详情<br><small>右键节点打开操作菜单 · 双击展开邻居</small></div>
+        <div class="bi-placeholder">点一下画布上的圆点，这里会显示它的档案<br><small>右键圆点打开操作菜单 · 双击展开和它相连的内容</small></div>
       </div>
     </aside>
   </main>
@@ -194,5 +197,9 @@
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <script type="module" src="./app.js"></script>
+<script type="module">
+  import { injectExplainers } from '../explain.js';
+  injectExplainers();
+</script>
 </body>
 </html>

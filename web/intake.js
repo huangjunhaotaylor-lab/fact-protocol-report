@@ -523,10 +523,10 @@ function checkBody() {
     warn.classList.remove('body-ok');
   } else if (hits.length) {
     warn.classList.remove('body-ok');
-    warn.textContent = `⚠ 检测到判断类表达：${hits.join('、')} —— Signal 只表达现实，服务端将拒绝创建（AC-008）`;
+    warn.textContent = `⚠ 检测到判断类表达：${hits.join('、')} —— 信号只记录事实，不写评价和判断，否则系统会拒绝创建`;
   } else {
     warn.classList.add('body-ok');
-    warn.textContent = '✓ 事实观察格式：主体 + 当前行为 / 状态 / 已发生事实';
+    warn.textContent = '✓ 事实格式没问题：主体 + 当前行为 / 状态 / 已发生事实';
   }
 }
 
@@ -571,11 +571,11 @@ function initSignalForm() {
     e.preventDefault();
     clearError();
     if (!selectedFrags.size) {
-      showError(new Error('Signal 必须引用至少一个 Fragment（AC-006）——请在第二步列表中点「选用」'));
+      showError(new Error('每条信号都必须有至少一句划出的关键句做支撑——请在第二步列表中点「选用」'));
       return;
     }
     if (!anchorIds.size) {
-      showError(new Error('Signal 必须锚定至少一个 Object（AC-007）——请勾选或创建对象'));
+      showError(new Error('每条信号都必须挂到至少一个业务对象上——请勾选或创建对象'));
       return;
     }
     const btn = $('sig-submit');

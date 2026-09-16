@@ -8,6 +8,7 @@
  */
 
 import { evidences, fragments, signals, objects, relations, ApiError } from './api.js';
+import { expIcon } from './explain.js';
 
 /* Fragment 无独立列表端点：由各 Evidence 的 by-evidence 聚合 */
 
@@ -54,10 +55,10 @@ function microbar(dist) {
   return `<div class="microbar">${segs}</div>`;
 }
 
-function flowNode(layer, label, name, count, dist, note) {
+function flowNode(layer, label, name, count, dist, note, expKey) {
   return `<div class="flow-node l-${layer}">
     <div class="fn-label">${label}</div>
-    <div class="fn-name">${name}</div>
+    <div class="fn-name">${name}${expKey ? expIcon(expKey) : ''}</div>
     <div class="fn-count num">${count}</div>
     ${microbar(dist)}
     <div class="fn-note">${note}</div>
@@ -131,21 +132,21 @@ async function main() {
   if (anchoredObjects.size) timelineDist['投影'] = anchoredObjects.size;
 
   const nodes = [
-    flowNode('evidence', 'L1 · 原始证据', 'Evidence', evList.length, evDist, '原文不可变 · checksum'),
-    flowNode('fragment', 'L2 · 证据片段', 'Fragment', frgList.length, frgDist, '来自原文 · 可定位'),
-    flowNode('signal', 'L3 · 业务观察', 'Signal', sigList.length, sigDist, '事实观察 · 非结论'),
-    flowNode('object', 'L4 · 对象锚定', 'Object Anchor', objList.length, objDist, `${anchoredObjects.size} 个被锚定`),
-    flowNode('relation', 'L5 · 事实关系', 'Relation / State', relList.length, countBy(relList, 'type'), 'derived_from Signal'),
-    flowNode('timeline', 'L6 · 时间投影', 'Timeline', anchoredObjects.size, timelineDist, '由 Signal 投影 · 不可写入'),
+    flowNode('evidence', 'L1 · 原始资料', 'Evidence 证据', evList.length, evDist, '原文一字不改 · 带防伪指纹', 'evidence'),
+    flowNode('fragment', 'L2 · 关键片段', 'Fragment 片段', frgList.length, frgDist, '从原文划出的关键句 · 可定位回原文', 'fragment'),
+    flowNode('signal', 'L3 · 事实信号', 'Signal 信号', sigList.length, sigDist, '一条条事实 · 只陈述不评价', 'state-machine'),
+    flowNode('object', 'L4 · 业务对象', 'Object 对象', objList.length, objDist, `${anchoredObjects.size} 个对象挂着信号`, 'anchor'),
+    flowNode('relation', 'L5 · 对象关系', 'Relation 关系', relList.length, countBy(relList, 'type'), '对象间的事实连接 · 出自信号', 'relation'),
+    flowNode('timeline', 'L6 · 时间投影', 'Timeline 时间线', anchoredObjects.size, timelineDist, '由信号自动排成 · 只读', 'timeline'),
   ];
   flowEl.innerHTML = nodes.join(`<div class="flow-arrow">${ARROW_SVG}</div>`);
 
   barsEl.innerHTML = [
-    hbarGroup('Evidence', evDist, ['Created', 'Archived']),
-    hbarGroup('Fragment', frgDist, ['Created', 'Archived']),
-    hbarGroup('Signal', sigDist, ['Captured', 'Verified', 'Invalid', 'Archived']),
-    hbarGroup('Object', objDist, ['Created', 'Active', 'Merged', 'Archived']),
-    hbarGroup('Relation', relList.length ? { 全部: relList.length } : {}, ['全部'], '无状态机 · 均可追溯 Signal'),
+    hbarGroup('Evidence 证据' + expIcon('evidence'), evDist, ['Created', 'Archived']),
+    hbarGroup('Fragment 片段' + expIcon('fragment'), frgDist, ['Created', 'Archived']),
+    hbarGroup('Signal 信号' + expIcon('state-machine'), sigDist, ['Captured', 'Verified', 'Invalid', 'Archived']),
+    hbarGroup('Object 对象' + expIcon('anchor'), objDist, ['Created', 'Active', 'Merged', 'Archived']),
+    hbarGroup('Relation 关系' + expIcon('relation'), relList.length ? { 全部: relList.length } : {}, ['全部'], '无状态机 · 均可追溯回信号'),
   ].join('');
 }
 

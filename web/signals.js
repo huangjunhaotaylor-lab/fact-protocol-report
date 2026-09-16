@@ -20,12 +20,13 @@
 
 import { signals, ApiError } from './api.js';
 import { domainBadges } from './domain-badges.js';
+import { expIcon } from './explain.js';
 
 const COLUMNS = [
-  { state: 'Captured', label: '待核', tip: '新捕获的观察，等待人工或可信规则核认' },
-  { state: 'Verified', label: '已核', tip: '已由人工或可信规则确认' },
-  { state: 'Invalid', label: '无效', tip: '错误识别。协议禁止物理删除，仅状态留存' },
-  { state: 'Archived', label: '已归档', tip: '历史失效。协议禁止物理删除，仅状态留存' },
+  { state: 'Captured', label: '待核', tip: '刚录进来的新事实，还没有人核对过——点卡片上的「核认」确认它' },
+  { state: 'Verified', label: '已核', tip: '已有人核对确认无误，可作为可信事实使用' },
+  { state: 'Invalid', label: '无效', tip: '核对后发现是错的。只标记不删除，留痕方便复查' },
+  { state: 'Archived', label: '已归档', tip: '已办结或过时，封存起来。只标记不删除，留痕方便复查' },
 ];
 
 /** 展示层中文映射：数据值 / value / data-* 一律保持英文，未命中原样显示 */
@@ -117,17 +118,17 @@ function renderContext(s) {
 function renderActions(s) {
   if (s.state === 'Captured') {
     return `<div class="sc-actions">
-      <button class="btn small btn-verify" data-act="verify" data-id="${esc(s.id)}" data-tip="待核 → 已核&#10;人工或可信规则确认">核认</button>
-      <button class="btn small btn-invalid" data-act="invalid" data-id="${esc(s.id)}" data-tip="待核 → 无效&#10;错误识别标记，协议禁止物理删除">标记无效</button>
+      <button class="btn small btn-verify" data-act="verify" data-id="${esc(s.id)}" data-tip="待核 → 已核&#10;确认这条事实无误">核认</button>
+      <button class="btn small btn-invalid" data-act="invalid" data-id="${esc(s.id)}" data-tip="待核 → 无效&#10;确认是错的就标记出来；记录保留不删除">标记无效</button>
     </div>`;
   }
   if (s.state === 'Verified') {
     return `<div class="sc-actions">
-      <button class="btn small btn-archive" data-act="archive" data-id="${esc(s.id)}" data-tip="已核 → 已归档&#10;历史失效归档，协议禁止物理删除">归档</button>
+      <button class="btn small btn-archive" data-act="archive" data-id="${esc(s.id)}" data-tip="已核 → 已归档&#10;办结封存；记录保留不删除">归档</button>
     </div>`;
   }
   // Invalid / Archived：无操作仅展示
-  return `<div class="sc-actions"><span class="sc-noop">仅展示 · 协议禁止物理删除（AC-011）</span></div>`;
+  return `<div class="sc-actions"><span class="sc-noop">仅展示 · 系统不删除任何记录，留痕可复查</span></div>`;
 }
 
 /* ---------- 卡片 ---------- */
@@ -145,23 +146,23 @@ function renderCard(s) {
   return `<div class="sig-card${s.id === deepId ? ' hl' : ''}" data-id="${esc(s.id)}">
     <div class="sc-head">
       <span class="sc-id mono">${esc(s.id)}</span>
-      <span class="badge ${typeCls}">${esc(zh(SIGTYPE_CN, s.type))}</span>
+      <span class="badge ${typeCls}" data-tip="信号类型：这条事实的性质分类">${esc(zh(SIGTYPE_CN, s.type))}</span>${expIcon('signal-type')}
     </div>
-    ${(s.domains || []).length ? `<div class="sc-domains">${domainBadges(s.domains, s.primary_domain)}</div>` : ''}
+    ${(s.domains || []).length ? `<div class="sc-domains">${domainBadges(s.domains, s.primary_domain)}${expIcon('primary-domain')}</div>` : ''}
     <div class="sc-body">${esc(s.body)}</div>
     <div class="sc-meta">
-      <span>置信度 <span class="num">${fmtConf(s.confidence)}</span></span>
+      <span>置信度${expIcon('confidence')} <span class="num">${fmtConf(s.confidence)}</span></span>
       <span>${fmtTime(s.captured_at)}</span>
     </div>
     <div class="sc-anchors">
-      锚定 <span class="num">${(s.anchors || []).length}</span> 个对象 ${anchors}
+      锚定${expIcon('anchor')} <span class="num">${(s.anchors || []).length}</span> 个对象 ${anchors}
       · <span class="num">${(s.fragments || []).length}</span> 条片段
     </div>
     ${renderContext(s)}
     ${renderActions(s)}
     <div class="sc-foot">
-      <button class="frag-toggle" data-id="${esc(s.id)}">Fragment ▸</button>
-      <a href="./trace.html?id=${encodeURIComponent(s.id)}" data-tip="Signal → Fragment → Evidence 全链路追溯">追溯 →</a>
+      <button class="frag-toggle" data-id="${esc(s.id)}">支撑片段 ▸</button>
+      <a href="./trace.html?id=${encodeURIComponent(s.id)}" data-tip="往回看这条信号的完整出处：哪句话 → 哪份原文">追溯 →</a>
     </div>
     <div class="sc-frags" hidden></div>
   </div>`;
@@ -208,9 +209,9 @@ function renderBoard() {
 /* ---------- 状态流转（confirm + 无刷新更新） ---------- */
 async function doTransition(id, act) {
   const confirms = {
-    verify: `确认核认 ${id}？\n状态流转 待核 → 已核（人工或可信规则确认）。记录完整保留，不涉及删除。`,
-    invalid: `确认标记 ${id} 为无效？\n「无效」表示错误识别。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 待核 → 无效。`,
-    archive: `确认归档 ${id}？\n「已归档」表示历史失效，不再作为当前有效现实。协议禁止物理删除 Signal（AC-011），本操作仅为状态流转 已核 → 已归档。`,
+    verify: `确认核认 ${id}？\n表示你已核对过这条事实、确认无误（待核 → 已核）。记录完整保留，不涉及删除。`,
+    invalid: `确认标记 ${id} 为无效？\n「无效」表示核对后发现是错的。系统不删除任何信号，本操作只是改状态（待核 → 无效），随时能翻回来复查。`,
+    archive: `确认归档 ${id}？\n「已归档」表示办结或过时，不再作为当前有效事实。系统不删除任何信号，本操作只是改状态（已核 → 已归档）。`,
   };
   if (!window.confirm(confirms[act])) return;
 
@@ -265,7 +266,7 @@ async function toggleFragments(btn) {
   const box = card.querySelector('.sc-frags');
   const opening = box.hidden;
   box.hidden = !opening;
-  btn.textContent = opening ? 'Fragment ▾' : 'Fragment ▸';
+  btn.textContent = opening ? '支撑片段 ▾' : '支撑片段 ▸';
   if (!opening) return;
 
   if (fragCache.has(id)) {
