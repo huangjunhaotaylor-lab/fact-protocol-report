@@ -103,7 +103,7 @@ textarea:focus-visible {
 .nav > * { flex: 0 0 auto; }
 .nav .brand {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   margin-right: 16px;
   color: var(--ink);
   letter-spacing: 0.01em;
@@ -143,8 +143,11 @@ textarea:focus-visible {
 }
 .nav a.nav-link.soon { opacity: 0.55; cursor: default; }
 .nav a.nav-link.soon:hover { background: none; color: var(--muted); }
-/* Graph OS 默认入口：石墨描边强调 */
+/* Graph OS 默认入口：石墨描边强调（◆ 徽标符号 11px，inline-flex 居中） */
 .nav a.nav-link.nav-graph {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--accent);
   font-weight: 600;
   border: 1px solid var(--accent);
@@ -254,7 +257,10 @@ table.tbl tr:last-child td { border-bottom: none; }
 
 /* ---------- 按钮 ---------- */
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 5px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
@@ -279,22 +285,22 @@ table.tbl tr:last-child td { border-bottom: none; }
 .btn.small { padding: 2px 10px; font-size: 12px; }
 
 /* ---------- hbar 条形 ---------- */
-.hbar-group { margin-bottom: 14px; }
+.hbar-group { margin-bottom: 12px; }
 .hbar-group:last-child { margin-bottom: 0; }
 .hbar-group .hbar-title {
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   display: flex;
   justify-content: space-between;
   gap: 8px;
 }
 .hbar-group .hbar-title .total { color: var(--muted); font-weight: 400; }
-.hbar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #e9e9ec; }
+.hbar { display: flex; height: 8px; border-radius: 3px; overflow: hidden; background: #e9e9ec; }
 .hbar .seg { height: 100%; min-width: 0; }
 .hbar-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; font-size: 11px; color: var(--muted); }
 .hbar-legend .dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+  display: inline-block; width: 7px; height: 7px; border-radius: 2px;
   margin-right: 4px; vertical-align: baseline;
 }
 
@@ -353,7 +359,7 @@ table.tbl tr:last-child td { border-bottom: none; }
 .flow-node.l-timeline { border-top-color: var(--c-timeline); }
 
 /* 节点状态微条 */
-.microbar { display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #e9e9ec; margin-top: 8px; }
+.microbar { display: flex; height: 3px; border-radius: 1.5px; overflow: hidden; background: #e9e9ec; margin-top: 8px; }
 .microbar .seg { height: 100%; }
 
 .flow-arrow { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; }
@@ -376,13 +382,14 @@ table.tbl tr:last-child td { border-bottom: none; }
   content: "◆";
   color: var(--accent);
   margin-right: 6px;
-  font-size: 9px;
-  vertical-align: 1px;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: 0;
 }
 
 /* ---------- 空库引导 ---------- */
 .empty-guide { text-align: center; padding: 40px 20px; }
-.empty-guide .eg-icon { font-size: 34px; margin-bottom: 8px; color: var(--c-fragment); }
+.empty-guide .eg-icon { font-size: 34px; line-height: 1; margin-bottom: 8px; color: var(--c-signal); }
 .empty-guide h2 { margin: 0 0 6px; font-size: 16px; }
 .empty-guide p { color: var(--muted); margin: 0 0 16px; font-size: 13px; }
 
@@ -500,7 +507,7 @@ mark.hl {
 .frag-chip .chip-id { font-weight: 600; min-width: 0; overflow-wrap: anywhere; word-break: break-all; }
 .frag-chip .chip-meta { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
 /* 关联 Signal 行（G3：占满整行，带板块徽标） */
-.frag-chip .chip-sigs { flex: 1 1 100%; margin: 2px 0 0 18px; font-size: 11.5px; color: var(--muted); line-height: 2; }
+.frag-chip .chip-sigs { flex: 1 1 100%; margin: 2px 0 0 18px; font-size: 11px; color: var(--muted); line-height: 2; }
 .frag-chip .chip-sig { color: var(--c-signal); }
 
 /* 校验结果 */
@@ -525,6 +532,25 @@ mark.hl {
 /* 文本选中色：浅灰蓝 */
 ::selection { background: #dde3ec; }
 
+/* ---------- 图标规范（双端统一） ----------
+   .ico        功能性小图标 12px（🔍 ⏱ ⚙ ✦ ▾ × 等），固定 14px 盒子便于对齐
+   .ico-badge  徽标符号 11px（导航 ◆、principle ◆ 等）
+   .ico-title  标题级符号 14px（品牌 ◆ logo）
+   三者统一：inline-flex 居中、行高 1、不随字重倾斜、颜色继承或 muted */
+.ico, .ico-badge, .ico-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 400;
+  flex: 0 0 auto;
+  user-select: none;
+}
+.ico { width: 14px; height: 14px; font-size: 12px; color: var(--muted); }
+.ico-badge { font-size: 11px; color: inherit; }
+.ico-title { font-size: 14px; color: inherit; }
+
 /* ---------- 术语解释图标（explain.js · .exp-ico + data-exp） ---------- */
 /* 小圆圈问号：克制、muted 默认色，hover 变 accent 并弹出深色解释气泡 */
 .exp-ico {
@@ -535,7 +561,7 @@ mark.hl {
   height: 12px;
   border-radius: 50%;
   margin-left: 4px;
-  vertical-align: 1px;
+  vertical-align: -1.5px;
   font-size: 9px;
   font-weight: 700;
   line-height: 1;

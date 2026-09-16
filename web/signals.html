@@ -9,7 +9,7 @@
     /* ===== Signal 工作台自有样式（不动 styles.css） ===== */
 
     /* 工具条 */
-    .tb-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .tb-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .tb-row label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
     .tb-row select, .tb-row input {
       border: 1px solid var(--line);
@@ -26,7 +26,7 @@
 
     /* 四列看板 */
     .board-wrap { overflow-x: auto; padding-bottom: 8px; }
-    .board { display: flex; gap: 14px; align-items: flex-start; min-width: 980px; }
+    .board { display: flex; gap: 16px; align-items: flex-start; min-width: 980px; }
     .board-col {
       flex: 1 1 0;
       min-width: 0;
@@ -127,7 +127,7 @@
 <body>
   <nav class="nav">
     <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
-    <a class="nav-link nav-graph" href="/static/graph/graph.html">◆ Graph OS</a>
+    <a class="nav-link nav-graph" href="/static/graph/graph.html"><span class="ico-badge">◆</span> Graph OS</a>
     <a class="nav-link" href="./index.html">总览</a>
     <a class="nav-link" href="./intake.html">录入台</a>
     <a class="nav-link" href="./evidence.html">证据库</a>
@@ -147,7 +147,7 @@
 
     <!-- 空库引导 -->
     <section id="empty-guide" class="card empty-guide" hidden>
-      <div class="eg-icon">◈</div>
+      <div class="eg-icon">◆</div>
       <h2>还没有任何信号</h2>
       <p>信号是从资料里提炼出的一条条事实，必须有原文里的关键句做支撑、并挂到业务对象上。请先到录入台完成「原文 → 划句 → 提炼」三步。</p>
       <a class="btn primary" href="./intake.html">前往录入台</a>

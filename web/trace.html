@@ -12,18 +12,18 @@
     .sig-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 11px; color: var(--muted); }
     .sig-meta .conf { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 
-    /* 状态筛选行 */
+    /* 状态筛选行（chips 与 Graph OS .chip 同规格：12px / 圆角 12px / 选中浅石墨底） */
     .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .filter-row .f-chip {
       border: 1px solid var(--line);
       background: var(--card-bg);
-      border-radius: 14px;
-      padding: 1px 10px;
-      font-size: 11px;
+      border-radius: 12px;
+      padding: 3px 11px;
+      font-size: 12px;
       cursor: pointer;
       color: var(--muted);
     }
-    .filter-row .f-chip.on { color: var(--ink); font-weight: 600; border-color: var(--c-signal); background: #edf0f4; }
+    .filter-row .f-chip.on { color: var(--c-signal); font-weight: 600; border-color: var(--c-signal); background: rgba(74, 85, 104, 0.1); }
 
     /* 证据链分支：Signal 根 → 每条链 Fragment → Evidence 三级 */
     .chain-root { margin-bottom: 4px; }
@@ -81,7 +81,7 @@
       margin-top: 8px;
       max-height: 220px;
       overflow-y: auto;
-      font-size: 12.5px;
+      font-size: 13px;
       line-height: 1.9;
     }
 
@@ -91,7 +91,7 @@
 <body>
   <nav class="nav">
     <div class="brand">BSP Reality Layer<small>Business Signal Protocol 1.1</small></div>
-    <a class="nav-link nav-graph" href="/static/graph/graph.html">◆ Graph OS</a>
+    <a class="nav-link nav-graph" href="/static/graph/graph.html"><span class="ico-badge">◆</span> Graph OS</a>
     <a class="nav-link" href="./index.html">总览</a>
     <a class="nav-link" href="./intake.html">录入台</a>
     <a class="nav-link" href="./evidence.html">证据库</a>
